@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-visual">
 <meta name="theme-color" content="#2457d6">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -89,6 +89,13 @@ th{color:var(--mute);font-size:12px}
 .bar2{height:8px;border-radius:5px;background:var(--ctx);overflow:hidden}.bar2>div{height:100%}
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(118px + env(safe-area-inset-bottom,0px));background:#1d2330;color:#fff;padding:10px 16px;border-radius:10px;z-index:60;opacity:0;pointer-events:none;transition:opacity .2s;max-width:90vw;font-size:14px;box-shadow:0 6px 24px #0005}#toast.show{opacity:1}
 /* ---- Notas por bloques y tarjetas de exámenes ---- */
+.alink{display:flex;gap:10px;align-items:center;padding:12px 4px;border-top:1px solid var(--line);cursor:pointer;color:inherit;text-decoration:none}
+.alink:first-of-type{border-top:0}
+.adot{width:14px;height:14px;border-radius:50%;border:2px solid;flex:0 0 auto}
+.posit{margin-top:12px;background:#fff3a3;color:#4a4100;border-radius:6px;padding:10px 10px 12px;box-shadow:0 3px 10px #0003;transform:rotate(-.4deg)}
+.posit .phd{font-weight:700;font-size:13px;margin-bottom:4px}
+.posit textarea{width:100%;min-height:120px;background:transparent;border:0;resize:vertical;color:#3b3400;font:inherit;line-height:1.5;padding:2px;outline:0}
+.posit textarea::placeholder{color:#8d7f1d}
 .nsum{display:flex;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line);flex-wrap:wrap;cursor:pointer}
 .nbk{border:1px solid var(--line);border-radius:12px;margin:8px 0;overflow:hidden}
 .nbk>.nbh{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px;background:color-mix(in srgb,var(--accent) 8%,var(--card));cursor:pointer;list-style:none}
@@ -140,7 +147,7 @@ th{color:var(--mute);font-size:12px}
  .note{margin:0 0 10px}
  /* hoja inferior para el panel del día y los formularios */
  .pan{left:0;right:0;top:auto;bottom:0;width:100%;max-height:88vh;max-height:calc(100dvh - 28px);border-left:0;border-radius:18px 18px 0 0;padding:14px 14px calc(36px + env(safe-area-inset-bottom));transform:translateY(105%);box-shadow:0 -10px 40px #0006;z-index:50;-webkit-overflow-scrolling:touch}
- body:has(.pan.open) #bnav{display:none}                 /* con un panel abierto, la barra de abajo no tapa el final ni el botón Guardar */
+ body:has(.pan.open) #bnav,body.kb #bnav{display:none}                 /* con un panel abierto, la barra de abajo no tapa el final ni el botón Guardar */
  .pan.open{transform:none}
  .pan::before{content:"";display:block;width:44px;height:5px;border-radius:3px;background:var(--line);margin:-6px auto 10px}
  /* tablas como tarjetas */
@@ -291,8 +298,14 @@ const tt=t=>ovr[t.id]!=null?ovr[t.id]:bt(t);
 const dkm={};let dki=0;const reg=k=>{dkm[++dki]=k;return dki};     // registro de claves para arrastrar/editar
 const tmin=s=>{const [h,m]=s.split(":").map(Number);return h*60+m};
 let SES=DATA.sessions,byDay={};
-function index(){byDay={};const add=(o,t)=>{(byDay[o.date]=byDay[o.date]||[]).push({...o,t})};
- SES.forEach(s=>add(s,"study"));DATA.exams.forEach(s=>add(s,"exam"));DATA.admin.forEach(s=>add(s,"admin"));ctxEff().forEach(s=>add(s,"ctx"));
+/* 2.ª convocatoria: si apruebas la asignatura en 1.ª se quita; si la suspendes, el examen se activa (deja de verse apagado) y pasa al calendario */
+function syncConv(){let ch=false;const stt={};Object.keys(NOTAS).forEach(sj=>{try{stt[sj]=calcN(sj).state}catch(e){stt[sj]=""}});
+ DATA.exams.forEach(e=>{if(e.user||e.conv!="2C"){if(e.cv!="on"){e.cv="on";ch=true}return}
+  if(e.c0===undefined)e.c0=e.cierto;const s=stt[e.subj];let cv,ci;
+  if(s=="ok"){cv="hide";ci=false}else if(e.c0){cv="on";ci=true}else if(["susp","lost","rep"].includes(s)){cv="on";ci=true}else{cv="off";ci=false}
+  if(e.cv!=cv||e.cierto!==ci){e.cv=cv;e.cierto=ci;ch=true}});return ch}
+function index(){byDay={};const add=(o,t)=>{(byDay[o.date]=byDay[o.date]||[]).push({...o,t})};syncConv();
+ SES.forEach(s=>add(s,"study"));DATA.exams.forEach(s=>{if(s.cv!="off"&&s.cv!="hide")add(s,"exam")});DATA.admin.forEach(s=>add(s,"admin"));ctxEff().forEach(s=>add(s,"ctx"));
  Object.values(byDay).forEach(a=>a.sort((x,y)=>x.start-y.start))}
 const focusAt=d=>(DATA.focus||[]).find(f=>f.a<=d&&d<=f.b);
 function replan(base,nowA){
@@ -458,12 +471,12 @@ function toggleMore(){const m=document.getElementById("more");if(m.classList.con
  closePan();m.innerHTML=`<h4>Más secciones</h4>`+MORE.map(([k,n])=>`<button class="${view==k?"on":""}" onclick="goTab('${k}')">${n}</button>`).join("")
   +`<h4 style="margin-top:12px">Herramientas</h4><button onclick="document.body.classList.toggle('fopen');closeMore();render()">🎛 Filtros (asignaturas y tipos)</button><button onclick="closeMore();manualReplan()">🔄 Recalcular pendientes ahora</button>`;m.classList.add("open")}
 function shiftDay(n){const d=pd(curDay);d.setDate(d.getDate()+n);curDay=iso(d);render();window.scrollTo(0,0)}
-function bottomNav(){const mv=["tareas","notas","exams","entregas","hours"].includes(view);
+function bottomNav(){const mv=["asig","asig1","tareas","notas","exams","entregas","hours"].includes(view);
  document.getElementById("bnav").innerHTML=[["dia","📍","Hoy"],["week","🗓","Semana"],["month","📆","Mes"],["todo","☑️","Pendiente"]].map(([k,i,n])=>`<button class="${view==k&&!document.getElementById("more").classList.contains("open")?"on":""}" onclick="goTab('${k}')"><i>${i}</i>${n}</button>`).join("")
-  +`<button class="${mv||document.getElementById("more").classList.contains("open")?"on":""}" onclick="toggleMore()"><i>⋯</i>${mv?MORE.find(m=>m[0]==view)[1].replace(/^\S+\s/,""):"Más"}</button>`}
-const MORE=[["tareas","📋 Tareas y horas"],["notas","🎓 Notas"],["exams","📝 Exámenes"],["entregas","📌 Entregas"],["hours","⏱ Horas"]];
-function tabs(){const t=[["dia","Día"],["week","Semana"],["month","Mes"],["todo","Hecho / Pendiente"],["tareas","Tareas y horas"],["notas","Notas"],["exams","Exámenes"],["entregas","Entregas"],["hours","Horas"]];
- document.getElementById("tabs").innerHTML=t.map(([k,n])=>`<button class="${view==k?"on":""}" onclick="goTab('${k}')">${n}</button>`).join("");
+  +`<button class="${mv||document.getElementById("more").classList.contains("open")?"on":""}" onclick="toggleMore()"><i>⋯</i>${mv?MORE.find(m=>m[0]==(view=="asig1"?"asig":view))[1].replace(/^\S+\s/,""):"Más"}</button>`}
+const MORE=[["asig","📚 Asignaturas"],["tareas","📋 Tareas y horas"],["notas","🎓 Notas"],["exams","📝 Exámenes"],["entregas","📌 Entregas"],["hours","⏱ Horas"]];
+function tabs(){const t=[["dia","Día"],["week","Semana"],["month","Mes"],["todo","Hecho / Pendiente"],["asig","Asignaturas"],["tareas","Tareas y horas"],["notas","Notas"],["exams","Exámenes"],["entregas","Entregas"],["hours","Horas"]];
+ document.getElementById("tabs").innerHTML=t.map(([k,n])=>`<button class="${view==k||(k=="asig"&&view=="asig1")?"on":""}" onclick="goTab('${k}')">${n}</button>`).join("");
  document.getElementById("filters").innerHTML=Object.keys(S).map(k=>`<span class="chip ${hidden.has(k)?"off":""}" onclick="tg('${k}')"><i style="background:${S[k].color};border:1px solid ${S[k].ink}"></i>${S[k].name}</span>`).join("")+Object.keys(CTXN).map(k=>`<span class="chip ${ctxOn.has(k)?"":"off"}" onclick="ctxOn.has('${k}')?ctxOn.delete('${k}'):ctxOn.add('${k}');render()"><i style="background:${k=="clase"?"#CFEFC4":CTXC[k][0]}"></i>${CTXN[k]}</span>`).join("")}
 function tg(k){hidden.has(k)?hidden.delete(k):hidden.add(k);render()}
 const MK={festivo:["#b45309","#fff3cd"],cambio:["#1d4ed8","#dbeafe"],fin:["#7e22ce","#f3e8ff"]};
@@ -580,11 +593,11 @@ function exCard(e,past){const k=exKey(e),i=reg(k),d=pd(e.date),f=Math.round((d-p
    ${hxb?`<div class="xs"><b>Horas de estudio</b>${hxb}</div>`:""}</div></details>`}
 function examsTab(kind){const ent=kind=="ent",P=pst[kind],T1=ent?"entregas":"exámenes",T2=ent?"Entregas":"Exámenes";
  const all=[...DATA.exams].filter(e=>(e.tipo=="entrega")==ent).sort((a,b)=>a.date.localeCompare(b.date)||a.start-b.start);
- const apr=new Set(Object.keys(NOTAS).filter(sj=>calcN(sj).state=="ok")),vis=all.filter(e=>!(e.conv=="2C"&&apr.has(e.subj))),oc=all.length-vis.length;
+ const apr=new Set(Object.keys(NOTAS).filter(sj=>calcN(sj).state=="ok")),vis=all.filter(e=>e.cv!="hide"),oc=all.length-vis.length;
  const nowMs=Date.now(),endMs=e=>pd(e.date).getTime()+e.end*6e4;
  const up=vis.filter(e=>endMs(e)>nowMs),past=vis.filter(e=>endMs(e)<=nowMs).reverse();
  const cnt={ok:0,np:0,sin:0};past.forEach(e=>cnt[exState(e).s]++);
- let hu=`<div class="card" style="margin-top:12px">${oc?`<div class="note" style="margin:0 0 8px">Ocultos ${oc} de 2.ª convocatoria porque tienes aprobada la asignatura (${[...apr].map(k=>SHORT[k]).join(", ")}) según la pestaña Notas.</div>`:""}<b>${ent?"Próximas entregas":"Próximos exámenes"}</b><div class="dim" style="font-size:12px;margin:2px 0 4px">Toca uno para ver la fecha, el porcentaje, el apartado de Notas al que cuenta y las horas de estudio.</div>${up.length?up.map(e=>exCard(e,false)).join(""):`<p class="dim">No quedan ${T1} por hacer.</p>`}</div>`;
+ let hu=`<div class="card" style="margin-top:12px">${oc?`<div class="note" style="margin:0 0 8px">Ocultos ${oc} de 2.ª convocatoria porque tienes aprobada la asignatura (${[...apr].map(k=>SHORT[k]).join(", ")}) según la pestaña Notas. Si la suspendes, vuelve a salir. Los de 2.ª convocatoria que aún no hacen falta salen apagados y no están en el calendario; al suspender la asignatura se activan y pasan al calendario.</div>`:""}<b>${ent?"Próximas entregas":"Próximos exámenes"}</b><div class="dim" style="font-size:12px;margin:2px 0 4px">Toca uno para ver la fecha, el porcentaje, el apartado de Notas al que cuenta y las horas de estudio.</div>${up.length?up.map(e=>exCard(e,false)).join(""):`<p class="dim">No quedan ${T1} por hacer.</p>`}</div>`;
  let h=`<div class="card"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button class="${P.on?"on":""}" onclick="pst['${kind}'].on=!pst['${kind}'].on;render()">${T2} pasad${ent?"as":"os"} (${past.length}) ${P.on?"▴":"▾"}</button>
   <span class="dim">${ent?"Presentadas":"Presentados"} ${cnt.ok} · ${ent?"No presentadas":"No presentados"} ${cnt.np} · Sin nota ${cnt.sin}</span></div>`;
  if(P.on){const fl=[["all","Todos"],["ok",ent?"Presentadas":"Presentados"],["np","NP"],["sin","Sin nota"]];
@@ -668,7 +681,7 @@ function hours(){const w={},tot={},dn={};
  ks.forEach(k=>{const d=pd(k);let sum=0;h+=`<tr><td>${d.getDate()} ${MES[d.getMonth()].slice(0,3)}</td>`+Object.keys(S).map(s=>{const v=w[k][s]||0;sum+=v;return `<td>${v?v.toFixed(1):"·"}</td>`}).join("")+`<td><b>${sum.toFixed(1)}</b></td></tr>`});
  return h+`</table></div>`+dataCard()}
 /* pasar los datos guardados de un sitio a otro (p. ej. del HTML del ordenador a la Agenda del móvil) */
-const DKEYS=["neri_done","neri_ovr","neri_notas","neri_cls","neri_tripov","neri_trips","neri_gymov","neri_gym","neri_exn","neri_exl","neri_uex","neri_eov","neri_utk"];
+const DKEYS=["neri_done","neri_ovr","neri_notas","neri_cls","neri_tripov","neri_trips","neri_gymov","neri_gym","neri_exn","neri_exl","neri_uex","neri_eov","neri_utk","neri_anot"];
 const dataCard=()=>`<div class="card" style="margin-top:12px"><b>Copia de tus datos</b><div class="dim" style="margin:4px 0 8px">El HTML de la carpeta del ordenador no se sincroniza con la Agenda del móvil. Para pasar lo que hayas guardado en un sitio a otro: pulsa «Copiar mis datos» donde lo tengas, y pégalo e importa en el otro. Al importar se sustituyen tus marcas, notas y ediciones de ese sitio (el plan se recalcula solo).</div>
  <button onclick="expData()">Copiar mis datos</button><textarea id="impd" rows="3" style="width:100%;margin-top:8px" placeholder="Pega aquí los datos copiados"></textarea><button onclick="impData()" style="margin-top:6px">Importar datos pegados</button></div>`;
 function expData(){const o={};DKEYS.forEach(k=>{try{const v=localStorage.getItem(k);if(v!=null)o[k]=v}catch(e){}});const t=JSON.stringify(o),ta=document.getElementById("impd");
@@ -683,7 +696,7 @@ function dayRows(k){const items=(byDay[k]||[]).filter(e=>!((e.t=="study"||e.t=="
  if(!items.length)h+=`<p class="dim">Sin actividades.</p>`;
  h+=`<p class="dim" style="font-size:12px">${window.matchMedia&&matchMedia("(hover:hover)").matches?"Puedes arrastrar las sesiones de estudio en las vistas Semana y Mes, o pulsar ✎.":"Pulsa ✎ para mover, editar o eliminar una sesión."}</p>`;
  items.forEach(e=>{if(e.t=="ctx"&&!ctxOn.has(e.kind))return;const c=e.t=="ctx"?ctxCol(e)[e.kind=="clase"?1:0]:e.subj?S[e.subj].ink:"#9aa3b8";let box="";if(e.t=="study"){const kk=key(e);box=`<input type="checkbox" ${store[kk]?"checked":""} onchange="toggle('${kk.replace(/'/g,"\\'")}',this.checked)">`}
-  const lab=e.t=="exam"?`<b style="color:var(--exam)">${exLab(e)} · ${SHORT[e.subj]}</b><br>${e.name}`:e.t=="ctx"?(e.cancelled?`<span class="dim" style="text-decoration:line-through">${e.name}</span> <b style="color:var(--exam)">CANCELADA</b>`:e.kind=="viaje"?`<span class="dim">${e.name} · ${e.study?"puedes estudiar":"sin estudio"}</span>`:`<span class="dim">${e.name} (${e.kind})</span>`):e.t=="admin"?e.name:`<b>${e.name}</b><br><span class="dim">${e.detail||""}</span>`;
+  const lab=e.t=="exam"?`<b style="color:var(--exam)">${exLab(e)} · ${SHORT[e.subj]}</b><br>${e.name}`:e.t=="ctx"?(e.cancelled?`<span class="dim" style="text-decoration:line-through">${e.name}</span> <b style="color:var(--exam)">CANCELADA</b>`:e.kind=="viaje"?`<span class="dim">${e.name} · ${e.study?"puedes estudiar":"sin estudio"}</span>`:`<span class="dim">${e.name} (${e.kind})</span>`):e.t=="admin"?e.name:`<b>${S[e.subj]?S[e.subj].name:e.name}</b><br><span class="dim">${(S[e.subj]&&e.name&&e.name!=S[e.subj].name&&e.name!="Estudio libre"?e.name+" · ":"")}${e.detail||""}</span>`;
   const ed=e.t=="study"?`<button title="Editar, mover o eliminar" onclick="editS(${reg(key(e))})" style="padding:2px 8px">✎</button>`
    :e.t=="ctx"&&e.kind=="clase"?`<button title="La clase no se da: ese hueco se usa para estudiar" onclick="togCls(${reg(clsKey(e))})" style="padding:2px 8px;font-size:12px">${e.cancelled?"Restaurar":"Cancelar clase"}</button>`
    :e.t=="ctx"&&e.kind=="viaje"?`<button title="Editar o eliminar el viaje" onclick="editLeg(${reg(e.legId)})" style="padding:2px 8px">✎</button>`
@@ -965,6 +978,34 @@ function savePartNew(sj){const st=nst(sj),sc=schOf(sj),g=x=>document.getElementB
 let rstNArm=0;
 function rstParts(sj){if(Date.now()-rstNArm>6000){rstNArm=Date.now();toast("Vuelve a pulsar «Restaurar la guía» en 6 segundos: se borran tus cambios de pesos y los apartados añadidos de esta asignatura (las notas se mantienen).");return}
  rstNArm=0;const st=nst(sj),k=schOf(sj).k;if(st.ov)delete st.ov[k];if(st.cus)delete st.cus[k];if(st.hid)delete st.hid[k];saveN();render()}
+/* ---- ASIGNATURAS: lista de enlaces y ficha de cada una (apuntes, exámenes, tareas y horas) ---- */
+let curAsig=null,anot={};try{anot=JSON.parse(localStorage.getItem("neri_anot")||"{}")}catch(e){}
+const saveAnot=()=>{try{localStorage.setItem("neri_anot",JSON.stringify(anot))}catch(e){}};
+const aOpen=new Set();let anotT=null;
+function openAsig(sj){curAsig=sj;view="asig1";closePan();closeMore();render();window.scrollTo(0,0)}
+function anotInp(sj,v){anot[sj]=v;clearTimeout(anotT);anotT=setTimeout(saveAnot,500)}
+const notaTxtOf=sj=>{const c=calcN(sj);return c.final!=null?c.final:c.pts};
+function asigList(){const now=Date.now(),endMs=e=>pd(e.date).getTime()+e.end*6e4;
+ return `<div class="card"><b>Asignaturas</b><div class="dim" style="font-size:12px;margin:2px 0 6px">Toca una asignatura para abrir su ficha.</div>`+Object.keys(S).map(sj=>{
+  const nx=DATA.exams.filter(e=>e.subj==sj&&e.cv!="off"&&e.cv!="hide"&&e.cierto&&endMs(e)>now).sort((a,b)=>a.date.localeCompare(b.date)||a.start-b.start)[0],c=NOTAS[sj]?calcN(sj):null,d=nx?pd(nx.date):null,f=nx?Math.round((d-pd(today))/864e5):0;
+  return `<a class="alink" onclick="openAsig('${sj}')"><span class="adot" style="background:${S[sj].color};border-color:${S[sj].ink}"></span><span style="flex:1;min-width:0"><b>${S[sj].name}</b><br><span class="dim" style="font-size:12px">${nx?`${exLab(nx)} ${d.getDate()} ${MES[d.getMonth()].slice(0,3)} · ${f<=0?"hoy":f+" d"}`:"Sin próximos exámenes"}</span></span>${c?`<span class="chp" style="font-size:13px">${f2(notaTxtOf(sj))}</span>`:""}<span class="dim" style="font-size:18px">›</span></a>`}).join("")+`</div>`}
+function asigDetail(sj){if(!sj||!S[sj])return asigList();const c=NOTAS[sj]?calcN(sj):null,s0=c?NST[c.state]:null,now=Date.now(),endMs=e=>pd(e.date).getTime()+e.end*6e4;
+ const exs=DATA.exams.filter(e=>e.subj==sj&&e.cv!="hide").sort((a,b)=>a.date.localeCompare(b.date)||a.start-b.start),up=exs.filter(e=>endMs(e)>now),past=exs.filter(e=>endMs(e)<=now).reverse();
+ const det=(k,tit,body)=>`<details class="card" style="margin-top:12px" ${aOpen.has(sj+"|"+k)?"open":""} ontoggle="aOpen[this.open?'add':'delete']('${sj}|${k}')"><summary style="cursor:pointer;font-weight:700">${tit}</summary>${body}</details>`;
+ let h=`<p style="margin:0 0 8px"><button onclick="goTab('asig')">◀ Asignaturas</button></p>
+ <div class="card" style="border-left:6px solid ${S[sj].color}"><h2 style="margin:0 0 4px;font-size:22px">${S[sj].name}</h2>${c?`<div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap"><span class="dim">Nota que llevo:</span><b style="font-size:24px">${f2(notaTxtOf(sj))}</b><span style="color:${s0[1]};font-weight:600;font-size:13px">${s0[0]}</span><span class="dim" style="font-size:12px">${c.final!=null?"":`con el ${f2(100-c.Wp)} % evaluado`}</span></div>`:""}
+  <div class="posit"><div class="phd">📝 Apuntes importantes</div><textarea rows="6" placeholder="Correo del profesor, tutorías, aula, cosas a recordar…" oninput="anotInp('${sj}',this.value)">${esc(anot[sj]||"")}</textarea></div></div>`;
+ h+=det("ex",`📝 Exámenes y entregas (${up.length} próximos)`,`<div style="margin-top:6px">${up.length?up.map(e=>exCard(e,false)).join(""):`<p class="dim">No quedan exámenes ni entregas por hacer.</p>`}${past.length?`<div class="dim" style="font-size:12px;margin-top:8px">Pasados</div>`+past.map(e=>exCard(e,true)).join(""):""}</div>`);
+ h+=det("ta","📋 Tareas",asigTareas(sj));
+ h+=det("ho","⏱ Horas",asigHoras(sj));
+ return h}
+function asigTareas(sj){const used={},dn={};SES.forEach(s=>{if(s.subj!=sj||!s.task)return;const m=s.end-s.start;if(store[key(s)])dn[s.task]=(dn[s.task]||0)+m;if(!s.missed||store[key(s)])used[s.task]=(used[s.task]||0)+m});
+ const fd=a=>{const d=new Date(a*6e4);return `${d.getUTCDate()}/${d.getUTCMonth()+1}`},ts=DATA.tasks.filter(t=>t.subj==sj);
+ if(!ts.length)return `<p class="dim">Esta asignatura no tiene tareas de estudio.</p><p><button onclick="goTab('tareas')">＋ Añadir una tarea</button></p>`;
+ return `<div class="dim" style="font-size:12px;margin:6px 0">Cambia las «horas objetivo» y el plan se recalcula solo. Pon 0 para quitar una tarea.</div>`+ts.map(t=>`<div class="nit" style="border:1px solid var(--line);border-radius:10px;margin:6px 0"><div class="nh"><b>${esc(t.name)}${ovr[t.id]!=null?" ✎":""}</b><span class="chp">${fd(t.frm)} → ${fd(t.until)}</span></div><div class="ng"><label>Objetivo (h)<input class="num" type="number" min="0" step="0.25" value="${tt(t)/60}" onchange="setH('${t.id}',this.value)"></label><span class="nap">planificadas ${((used[t.id]||0)/60).toFixed(1)} h</span><span class="nap">hechas ${((dn[t.id]||0)/60).toFixed(1)} h</span></div></div>`).join("")+`<p><button onclick="goTab('tareas')">＋ Añadir una tarea</button></p>`}
+function asigHoras(sj){const w={};let tot=0,dn=0;SES.filter(s=>s.subj==sj&&(!s.missed||store[key(s)])).forEach(s=>{const d=pd(s.date),m=new Date(d);m.setDate(d.getDate()-wdi(d));const k=iso(m),hh=(s.end-s.start)/60;w[k]=(w[k]||0)+hh;tot+=hh;if(store[key(s)])dn+=hh});
+ const ks=Object.keys(w).sort();
+ return `<div style="margin:8px 0;display:flex;align-items:center;gap:8px"><div class="bar2" style="flex:1"><div style="width:${tot?dn/tot*100:0}%;background:${S[sj].ink}"></div></div><b>${tot?Math.round(dn/tot*100):0} %</b></div><div class="dim" style="margin-bottom:6px">Hechas ${dn.toFixed(1)} h de ${tot.toFixed(1)} h planificadas.</div>`+(ks.length?`<div style="display:flex;flex-wrap:wrap;gap:6px">`+ks.map(k=>{const d=pd(k);return `<span class="chp">${d.getDate()} ${MES[d.getMonth()].slice(0,3)} · ${w[k].toFixed(1)} h</span>`}).join("")+`</div><div class="dim" style="font-size:11px;margin-top:4px">Horas por semana (lunes de cada semana).</div>`:"")}
 /* aviso del próximo examen (y la próxima entrega) en Día, Semana y Mes */
 function nextBanner(){const now=Date.now(),td0=pd(today),endMs=e=>pd(e.date).getTime()+e.end*6e4,apr=new Set(Object.keys(NOTAS).filter(sj=>calcN(sj).state=="ok"));
  const ok=DATA.exams.filter(e=>e.cierto&&endMs(e)>now&&!hidden.has(e.subj)&&!(e.conv=="2C"&&apr.has(e.subj))).sort((a,b)=>a.date.localeCompare(b.date)||a.start-b.start);
@@ -976,7 +1017,11 @@ function nextBanner(){const now=Date.now(),td0=pd(today),endMs=e=>pd(e.date).get
  if(ex.length){const e=ex[0],n2=ex.slice(1,3);h+=`<div class="nxb" onclick="${view=="dia"?`curDay='${e.date}';render()`:`goTab('exams')`}"><span class="big">📝</span><div><b>Próximo examen: ${S[e.subj].name}</b><br>${fd(e)} · <b>${cu(e)}</b>${n2.length?`<div class="sub2">Después: ${n2.map(x=>`${ABR[x.subj]} ${pd(x.date).getDate()}/${pd(x.date).getMonth()+1}`).join(" · ")}</div>`:""}</div></div>`}
  if(en.length&&(Math.round((pd(en[0].date)-td0)/864e5)<=10)){const e=en[0];h+=`<div class="nxb" style="border-color:#7e57c2;background:color-mix(in srgb,#7e57c2 10%,var(--card))" onclick="goTab('entregas')"><span class="big">📌</span><div><b style="color:#7e57c2">Próxima entrega: ${S[e.subj].name}</b><br>${fd(e)} · <b>${cu(e)}</b></div></div>`}
  return h}
-function render(){tabs();bottomNav();document.getElementById("view").innerHTML=(["dia","week","month"].includes(view)?nextBanner():"")+{dia:dayview,month,week,todo,tareas,notas,exams,entregas,hours}[view]()}
+function render(){if(syncConv())index();tabs();bottomNav();document.getElementById("view").innerHTML=(["dia","week","month"].includes(view)?nextBanner():"")+{dia:dayview,month,week,todo,asig:asigList,asig1:()=>asigDetail(curAsig),tareas,notas,exams,entregas,hours}[view]()}
+/* con el teclado abierto la barra de abajo se esconde (queda tapada por el teclado, no sube encima de lo que escribes) */
+(function(){let h=null;const isF=e=>e.target&&/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)&&!["checkbox","radio","button"].includes(e.target.type);
+ document.addEventListener("focusin",e=>{if(isF(e)){clearTimeout(h);document.body.classList.add("kb")}});
+ document.addEventListener("focusout",e=>{if(isF(e)){clearTimeout(h);h=setTimeout(()=>document.body.classList.remove("kb"),250)}})})();
 let tx=0,ty=0;
 document.addEventListener("touchstart",e=>{tx=e.touches[0].clientX;ty=e.touches[0].clientY},{passive:true});
 document.addEventListener("touchend",e=>{if(view!="dia"||document.getElementById("pan").classList.contains("open"))return;if(e.target.closest&&e.target.closest("input,select,textarea"))return;
@@ -1002,7 +1047,7 @@ async function getDb(){
  return {collection:()=>({onSnapshot:(f,e)=>base.onSnapshot(f,e)}),doc:p=>({set:d=>base.doc(p.split("/")[1]).set(d)})}}
 /* ---- sincronización entre dispositivos: solo en la página publicada (usa la base de datos del artefacto); el HTML local sigue guardando solo en su navegador ---- */
 (async function(){
- const KEYS=["neri_done","neri_plan","neri_ovr","neri_notas","neri_cls","neri_tripov","neri_trips","neri_gymov","neri_gym","neri_exn","neri_exl","neri_uex","neri_eov","neri_utk"],TSK="neri_ts";
+ const KEYS=["neri_done","neri_plan","neri_ovr","neri_notas","neri_cls","neri_tripov","neri_trips","neri_gymov","neri_gym","neri_exn","neri_exl","neri_uex","neri_eov","neri_utk","neri_anot"],TSK="neri_ts";
  let db=null;try{db=await getDb()}catch(e){}
  if(!db||!window.Storage)return;
  const rawSet=Storage.prototype.setItem,rawRem=Storage.prototype.removeItem,lget=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
@@ -1027,7 +1072,7 @@ async function getDb(){
   ovr=j("neri_ovr",{});clsC=j("neri_cls",{});tripOv=j("neri_tripov",{});userTrips=j("neri_trips",[]);gymOv=j("neri_gymov",{});userGym=j("neri_gym",[]);
   exn=j("neri_exn",{});exl=j("neri_exl",null);nst0=j("neri_notas",{});
   uex=j("neri_uex",[]);DATA.exams=DATA.exams.filter(e=>!e.user);uex.forEach(e=>DATA.exams.push({...e,user:true}));
-  eov=j("neri_eov",{});applyEov();utk=j("neri_utk",[]);DATA.tasks=DATA.tasks.filter(t=>!t.user);utk.forEach(t=>DATA.tasks.push({...t,user:true}));
+  anot=j("neri_anot",{});eov=j("neri_eov",{});applyEov();utk=j("neri_utk",[]);DATA.tasks=DATA.tasks.filter(t=>!t.user);utk.forEach(t=>DATA.tasks.push({...t,user:true}));
   if(!exl){exl={};DATA.exams.forEach(e=>{const d=DEFL[(e.o?e.o.date:e.date)+"|"+e.subj];if(d)exl[exKey(e)]=d.map(p=>({p,g:exn[exKey(e)]!=null?exn[exKey(e)]:null,w:1}))})}
   if(oldPins.length)snap=replan(DATA.sessions.concat(oldPins),nowAbs());
   refresh();document.getElementById("next").innerHTML=upcoming();render()}
