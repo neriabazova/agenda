@@ -495,7 +495,7 @@ const exLab=e=>e.lab||(e.tipo=="entrega"?"ENTREGA":"EXAMEN"),exIco=e=>e.ico||(e.
 const exKey=e=>(e.o?e.o.date:e.date)+"|"+(e.o?e.o.start:e.start)+"|"+e.subj+"|"+e.tipo;      // la clave usa la fecha OFICIAL, así los vínculos y notas no se pierden al mover un examen
 const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");
 /* asignación propuesta examen → parte(s) de Notas (esquema:parte). Se puede cambiar en cada examen */
-const DEFL={"2026-11-04|HA":["ord:p1"],"2026-11-06|PAT":["exc:tr"],"2026-11-16|GEO":["exc:p5","exc:p6"],"2026-11-25|PI":["ord:tr"],"2026-11-25|HA":["ord:p3"],
+const DEFL={"2026-11-04|HA":["ord:p1"],"2026-11-06|PAT":["exc:tr"],"2026-11-16|GEO":["exc:p5","exc:p6","exc:p2"],"2026-11-25|PI":["ord:tr"],"2026-11-25|HA":["ord:p3"],
  "2026-12-10|GEO":["exc:p7","exc:p8"],"2026-12-10|PT2":["cur:ea","cur:ee","cur:ec"],"2026-12-11|PI":["ord:te","ord:pb"],"2026-12-14|MII":["exc:te","exc:pb","exc:ta"],
  "2026-12-16|CAM":["ord:pr","ord:te"],"2026-12-18|PAT":["exc:te","exc:pb"],"2026-12-21|OM":["ord:f1","ord:f2"],"2027-01-12|HA":["ord:te","ord:pb"],"2027-01-13|OH":["ord:pc","ord:te"],
  "2027-01-15|GEO":["exc:p3","exc:p4"],"2027-01-18|PI":["ord:te","ord:pb"],"2027-01-19|MII":["exc:te","exc:pb","exc:ta"],"2027-01-21|CAM":["ord:pr","ord:te"],"2027-01-25|PAT":["exc:te","exc:pb"],
@@ -512,6 +512,9 @@ try{if(localStorage.getItem("neri_exlv")!="3"){DATA.exams.filter(e=>e.subj=="HA"
 /* 22 nov: el examen del 25 nov de Hormigón es el Parcial 3 (el Parcial 2 ya no cuenta con él) */
 try{if(localStorage.getItem("neri_exlv")!="4"){DATA.exams.filter(e=>e.subj=="HA"&&e.tipo=="parcial"&&(e.o?e.o.date:e.date)=="2026-11-25").forEach(e=>{
   (exl[exKey(e)]||[]).forEach(l=>{if(l.p=="ord:p2"||l.p=="ord:ec")l.p="ord:p3"})});saveExl();localStorage.setItem("neri_exlv","4")}}catch(e){}
+/* 22 nov: el reconocimiento de rocas (prueba 2) se hace en el 2.º parcial de Geología */
+try{if(localStorage.getItem("neri_exlv")!="5"){DATA.exams.filter(e=>e.subj=="GEO"&&(e.o?e.o.date:e.date)=="2026-11-16").forEach(e=>{const k=exKey(e);exl[k]=exl[k]||[];
+  if(!exl[k].some(l=>l.p=="exc:p2"||l.p=="ord:p2"))exl[k].push({p:"exc:p2",g:null,w:1})});saveExl();localStorage.setItem("neri_exlv","5")}}catch(e){}
 const pw=v=>{const x=parseFloat(String(v).replace(",","."));return isFinite(x)&&x>=0?x:1};
 /* mover un examen de una parte de Notas a otra (conserva su nota y su peso) */
 function mvLink(i,j,p){const k=dkm[i],L=exl[k];if(!L||!L[j]||!p)return;const old=L[j];if(L.some((l,x)=>x!=j&&l.p==p)){L.splice(j,1)}else old.p=p;saveExl();render()}
@@ -718,7 +721,7 @@ function tareas0(){const used={},dn={};SES.forEach(s=>{if(!s.task)return;const m
  return h+`</table></div>`}
 /* ---- NOTAS: criterios de las guías docentes 2026-27 de la UBU (ubuvirtual.ubu.es, descargadas el 2026-11-04) ---- */
 const I=(id,n,w,min,rec,nt)=>({id,n,w,min,rec,nt});   // rec: si = se repite en 2.ª conv. · no = no recuperable · nd = la guía no lo indica
-const GEOI=[I("p1","Ejercicios en las prácticas de laboratorio",5,null,"no","Sin nota mínima; se hacen en los últimos 15 min de la práctica."),I("p2","Trabajo individual: identificación de minerales y rocas",5,5,"si"),
+const GEOI=[I("p1","Ejercicios en las prácticas de laboratorio",5,null,"no","Sin nota mínima; se hacen en los últimos 15 min de la práctica."),I("p2","Reconocimiento de rocas (identificación de minerales y rocas)",5,5,"si","Prueba 2 de la guía (trabajo individual). Se hace en el 2.º parcial."),
  I("p3","Teoría (temas 1-5)",15,5,"si","Mínimo 5/10 en cada parte; teoría y práctica NO se promedian."),I("p4","Práctica (prácticas 1-2)",15,5,"si"),
  I("p5","Teoría (temas 6-10)",15,5,"si"),I("p6","Práctica (prácticas 3-4.1)",15,5,"si"),
  I("p7","Teoría (temas 11-15)",15,5,"si"),I("p8","Práctica (prácticas 4.2-5)",15,5,"si")];
@@ -757,7 +760,7 @@ const NOTAS={
  OM:{id:7988,sch:[{k:"ord",n:"Ordinaria",rule:"Mínimo 4/10 en cada procedimiento y 5/10 en la media ponderada. En 2.ª conv. solo se repiten los suspensos; los aprobados no se repiten.",items:[
    I("f1","Prueba final I: escrita al acabar la unidad I",30,4,"si"),I("tr","Trabajo por cuenta propia: un problema completo",15,4,"si"),I("f2","Prueba final II: escrita al acabar la unidad II",30,4,"si"),I("ec","Evaluación continua: cuestionarios (teoría)",25,4,"si")]}]}};
 /* bloques de cada asignatura según su guía docente (ids de los apartados de cada esquema) */
-const GEOB=[["b1","Bloque 1 · Parcial 1",["p3","p4"]],["b2","Bloque 2 · Parcial 2",["p5","p6"]],["b3","Bloque 3 · Parcial 3",["p7","p8"]],["lb","Laboratorio",["p1","p2"]]];
+const GEOB=[["b1","Bloque 1 · Parcial 1",["p3","p4"]],["b2","Bloque 2 · Parcial 2",["p5","p6","p2"]],["b3","Bloque 3 · Parcial 3",["p7","p8"]],["lb","Laboratorio",["p1"]]];
 const BLK={CAM:{ord:[["pf","Pruebas finales",["pr","te"]],["ec","Evaluación continua",["ec"]]],exc:[["pe","Prueba escrita presencial",["te","p1","p2"]]]},
  MII:{ord:[["ex","Exámenes",["te","pb"]],["ta","Taller",["ta"]],["tr","Trabajos",["tr"]]],exc:[["ex","Exámenes",["te","pb"]],["ta","Taller",["ta"]],["tr","Trabajos",["tr"]]]},
  PAT:{ord:[["ex","Examen",["ex"]],["pr","Prácticas",["pr"]],["tr","Trabajos",["tr"]]],exc:[["ex","Exámenes",["te","pb"]],["tr","Trabajo de aplicación",["tr"]]]},
