@@ -758,7 +758,7 @@ const NOTAS={
   {k:"exc",n:"Excepcional (sin asistencia)",rule:"Examen teórico 30 %, examen práctico 30 % y un trabajo de aplicación 40 %. La parte de Fotogrametría (25 % de la nota) = ejercicio escrito 20 % + entrega de trabajos 80 %: se apunta aparte, debajo de la tabla. No indica mínimos.",items:[
    I("te","Examen teórico",30,null,"nd"),I("pb","Examen práctico",30,null,"nd"),I("tr","Trabajo de aplicación",40,null,"nd")]}]},
  HA:{id:7966,sch:[{k:"ord",n:"Ordinaria (evaluación continua)",rule:"≥50 % de la nota máxima en CADA unidad (trabajo, prueba final de teoría, prueba final de problemas). Mismos criterios en 1.ª y 2.ª conv.; la guía no dice si se conservan las partes aprobadas.",items:[
-   I("p1","Parcial 1 (preguntas cortas de teoría)",40/3,5,"si","Los 3 parciales forman la evaluación continua (40 %). El reparto entre ellos es editable (✎)."),I("p2","Parcial 2",40/3,5,"si","Sin examen en el calendario: apunta aquí su nota o añádelo en Exámenes."),I("p3","Parcial 3 (preguntas cortas de teoría)",40/3,5,"si","Examen del 25 de noviembre."),
+   I("p1","Parcial 1 (preguntas cortas de teoría)",40/3,null,"si","Los 3 parciales forman la evaluación continua (40 %). El reparto entre ellos es editable (✎)."),I("p2","Parcial 2",40/3,null,"si","Sin examen en el calendario: apunta aquí su nota o añádelo en Exámenes."),I("p3","Parcial 3 (preguntas cortas de teoría)",40/3,null,"si","Examen del 25 de noviembre."),
    I("te","Examen final: teoría",30,5,"si"),I("pb","Examen final: práctica (problemas)",30,5,"si")]},
   {k:"exc",n:"Excepcional (sin asistencia)",rule:"Una única prueba final: teórica 30 % y dos prácticas 30 % y 40 %. La guía no repite el mínimo; supongo ≥50 % como en la ordinaria.",items:[
    I("te","Prueba teórica",30,5,"si"),I("p1","Prueba práctica 1",30,5,"si"),I("p2","Prueba práctica 2",40,5,"si")]}]},
@@ -781,7 +781,7 @@ const B_T="Exámenes de teoría",B_P="Exámenes de práctica",B_W="Prácticas, t
 const BLK={CAM:{ord:[["te",B_T,["te"]],["pr",B_P,["pr"]],["tr",B_W,["ec"]]],exc:[["te",B_T,["te"]],["pr",B_P,["p1","p2"]]]},
  MII:{ord:[["te",B_T,["te"]],["pr",B_P,["pb"]],["tr",B_W,["ta","tr"]]],exc:[["te",B_T,["te"]],["pr",B_P,["pb"]],["tr",B_W,["ta","tr"]]]},
  PAT:{ord:[["te",B_T,["ex"]],["tr",B_W,["pr","tr"]]],exc:[["te",B_T,["te"]],["pr",B_P,["pb"]],["tr",B_W,["tr"]]]},
- HA:{ord:[["te",B_T,["p1","p2","p3","te"]],["pr",B_P,["pb"]]],exc:[["te",B_T,["te"]],["pr",B_P,["p1","p2"]]]},
+ HA:{ord:[["pa","Parciales (evaluación continua)",["p1","p2","p3"]],["ft","Examen final de teoría",["te"]],["fp","Examen final de práctica",["pb"]]],exc:[["te",B_T,["te"]],["pr",B_P,["p1","p2"]]]},
  GEO:{ord:GEOB,exc:GEOB},PI:{ord:[["te",B_T,["te"]],["pr",B_P,["pb"]],["tr",B_W,["ec","tr"]]]},
  PT2:{cur:[["pr","Presentaciones",["a1","a2","a3","a4"]],["pe","Proyecto de ejecución",["ea","ee","ec"]]]},
  OH:{ord:[["te",B_T,["te"]],["pr",B_P,["pa","pc"]],["tr",B_W,["tr"]]],exc:[["te",B_T,["te"]],["pr",B_P,["p1","p2"]]]},
@@ -793,6 +793,7 @@ const TY={CAM:{pr:"final",te:"final",ec:"continua",p1:"final",p2:"final"},MII:{t
  OH:{te:"continua",pa:"continua",pc:"final",tr:"trabajo",p1:"final",p2:"final"},OM:{f1:"final",f2:"final",ec:"continua",tr:"trabajo"}};
 const TYL={parcial:"Parcial",final:"Final",continua:"Evaluación continua",práctica:"Práctica",trabajo:"Trabajo",entrega:"Entrega",exposición:"Exposición",laboratorio:"Laboratorio",taller:"Taller",prueba:"Prueba",presentación:"Presentación",proyecto:"Proyecto",otro:"Otro"};
 const tyOf=(sj,id,k)=>(sj=="HA"&&k=="exc")?"final":((TY[sj]||{})[id]||"");
+const BMIN={HA:{ord:{pa:5}}};      // mínimo de media de un bloque según la guía (Hormigón: 5 de media entre los 3 parciales)
 const DEFSCH={MII:"exc",PT2:"cur",GEO:"exc",PAT:"exc"};
 let nst0={};try{nst0=JSON.parse(localStorage.getItem("neri_notas")||"{}")}catch(e){}
 const saveN=()=>{try{localStorage.setItem("neri_notas",JSON.stringify(nst0))}catch(e){}};
@@ -801,8 +802,12 @@ function schBy(sj,k){const st=nst(sj),base=NOTAS[sj].sch.find(s=>s.k==k)||NOTAS[
  const hid=(st.hid||{})[base.k]||[],items=base.items.filter(it=>!hid.includes(it.id)).map(it=>({...it,...(ov[it.id]||{})}));
  const blocks=((BLK[sj]||{})[base.k]||[["ev","Evaluación",base.items.map(i=>i.id)]]).map(([id,n,ids])=>({id,n,items:ids.map(i=>items.find(x=>x.id==i)).filter(Boolean)}));
  cus.forEach(c=>{const it={id:c.id,n:c.n,w:c.w,min:c.min==null?null:c.min,rec:c.rec||"nd",ty:c.ty||"",nt:"Añadido por ti",custom:true,...(ov[c.id]||{})};items.push(it);
-  let b=blocks.find(x=>x.id==c.b);if(!b){b={id:c.b,n:c.bn||"Otros",items:[]};blocks.push(b)}b.items.push(it)});
- return {...base,items,blocks}}
+  let bid=c.b;if(sj=="HA"&&base.k=="ord"){if(bid=="te")bid=c.ty=="final"?"ft":"pa";else if(bid=="pr")bid="fp"}
+  let b=blocks.find(x=>x.id==bid);if(!b){b={id:bid,n:c.bn||"Otros",items:[]};blocks.push(b)}b.items.push(it)});
+ items.forEach(it=>{const o=ov[it.id];if(!o||!o.b)return;const cur=blocks.find(x=>x.items.includes(it));if(cur&&cur.id==o.b)return;if(cur)cur.items.splice(cur.items.indexOf(it),1);
+  let tb=blocks.find(x=>x.id==o.b);if(!tb){tb={id:o.b,n:o.bn||"Otros",items:[]};blocks.push(tb)}tb.items.push(it)});
+ blocks.forEach(b=>{const o=ov["b:"+b.id],dm=((BMIN[sj]||{})[base.k]||{})[b.id];b.min=o&&("min" in o)?o.min:(dm==null?null:dm);if(o&&o.n)b.n=o.n});
+ return {...base,items,blocks:blocks.filter(b=>b.items.length)}}
 const schOf=sj=>schBy(sj,nst(sj).sch);
 function guessPart(sj,kind){const sc=schOf(sj),rx=kind=="exposicion"?/exposici|presentaci|trabajo/i:(kind=="practica"||kind=="entrega")?/pr[aá]ctica|trabajo|laboratorio|taller/i:kind=="final"?/final|examen|prueba|te[oó]r/i:/parcial|examen|prueba|te[oó]r/i;
  const m=sc.items.filter(x=>rx.test(x.n)),m2=m.length?m:sc.items.filter(x=>rx.test((sc.blocks.find(b=>b.items.includes(x))||{}).n||"")),used=x=>{const key=sc.k+":"+x.id;return DATA.exams.some(e=>e.subj==sj&&(exl[exKey(e)]||[]).some(l=>l.p==key))||((nst(sj).subs||{})[key]||[]).length>0},it=m2.find(x=>!used(x))||m2[0];return it?sc.k+":"+it.id:""}
@@ -835,6 +840,9 @@ function calcN(sj){const st=nst(sj),sc=schOf(sj),T=st.T??5,sp=sc.special=="pt2";
   let frac=g==null?0:1;if(ag.n1>0&&(g2==null||it.rec=="no")&&ag.w1tot>0&&ag.w1g<ag.w1tot-1e-9)frac=ag.w1g/ag.w1tot;      // solo parte de las notas del apartado: lo que falta sigue pendiente
   const comp=frac>=1-1e-9,fail=g!=null&&comp&&it.min!=null&&g<it.min-1e-9,rep=fail&&it.rec!="no";
   return {it,g1,g2,g,ag,frac,fail,rep,lost:fail&&it.rec=="no",pw:rep?it.w:it.w*(1-frac)}});
+ sc.blocks.forEach(b=>{if(b.min==null)return;const rs=b.items.map(it=>rows.find(r=>r.it.id==it.id)).filter(Boolean);if(!rs.length||rs.some(r=>r.frac<1-1e-9||r.g==null))return;     // mínimo del bloque: media de todas sus notas
+  const W=rs.reduce((s,r)=>s+r.it.w,0),avg=W?rs.reduce((s,r)=>s+r.it.w*r.g,0)/W:null;
+  if(avg!=null&&avg<b.min-1e-9)rs.forEach(r=>{r.bfail=true;r.fail=true;r.rep=r.it.rec!="no";r.lost=r.it.rec=="no";r.pw=r.rep?r.it.w:r.it.w*(1-r.frac)})});
  const pend=rows.filter(r=>r.pw>1e-9),done=rows.filter(r=>r.frac>0&&!r.rep);
  const pts=done.reduce((x,r)=>x+r.it.w*r.frac/100*r.g,0),Wp=rows.reduce((x,r)=>x+r.pw,0),Wd=100-Wp;
  const out={rows,pts,Wp,Wd,T,max:pts+Wp/100*10,sp};
@@ -853,21 +861,23 @@ const saveNOpen=()=>{try{localStorage.setItem("neri_nopen",JSON.stringify([...nO
 function togN(sj,o){const had=nOpen.has(sj);if(o==had)return;o?nOpen.add(sj):nOpen.delete(sj);saveNOpen()}
 function nAll(o){o?Object.keys(NOTAS).forEach(k=>nOpen.add(k)):nOpen.clear();saveNOpen();render()}
 const NST={ok:["Aprobada","#2e7d32"],susp:["Suspensa (media <5)","#c62828"],lost:["Parte no recuperable suspensa","#c62828"],rep:["Repetir partes en 2.ª conv.","#e65100"],prog:["En curso","var(--mute)"],curso:["En curso","var(--mute)"],examen:["Falta nota de examen","#e65100"]};
-const subsDiv=(sj,sc,it)=>subsHTML(sj,sc,it).replace('<tr class="subs"><td colspan="8">','<div class="subs2">').replace("</td></tr>","</div>");
+const subsDiv=(sj,sc,it)=>subsHTML(sj,sc,it).replace('<tr class="subs"><td colspan="8">','<div class="subs2">').replace("</td></tr>","</div>").replace(/<div class="dim"[^>]*>Notas que forman[^<]*<\/div>/,"");
 let nbOpen=new Set();try{nbOpen=new Set(JSON.parse(localStorage.getItem("neri_nbopen")||"[]"))}catch(e){}
 function togNb(sj,b,o){const k=sj+"|"+b;if(o==nbOpen.has(k))return;o?nbOpen.add(k):nbOpen.delete(k);try{localStorage.setItem("neri_nbopen",JSON.stringify([...nbOpen]))}catch(e){}}
 function itemRow(sj,c,sc,it){const r=c.rows.find(x=>x.it.id==it.id)||{},st=nst(sj),k=sc.k+":"+it.id,g=st.g[k]||[null,null],ag=r.ag||{n1:0};
  const hasP=((st.subs||{})[k]||[]).length>0,ty=it.ty||tyOf(sj,it.id,sc.k),pend=r.g==null,part=r.frac>0&&r.frac<1-1e-9;
- const ap=r.frac>0&&!r.rep?`${f2(it.w*r.frac/100*r.g)} / ${f2(it.w/10)}`:"—";
- const nd=r.pw>1e-9?(c.feasible===false&&r.need>10?`<span style="color:#c62828">${f2(r.need)} ✖</span>`:`<b>${f2(r.need??(it.min||0))}</b>`):(r.fail?`<span style="color:#c62828">bajo mínimo</span>`:`<span style="color:#2e7d32">✔</span>`);
- return `<div class="nit ${r.fail?"fail":""}"><div class="nh"><b>${esc(it.n)}</b>${ty?`<span class="chp" style="background:var(--bg-accent,#dbeafe);color:#1d4ed8">${TYL[ty]||esc(ty)}</span>`:""}<span class="chp">${f2(it.w)} %</span>${it.min!=null?`<span class="chp">mín. ${f2(it.min)}</span>`:""}${it.rec=="no"?`<span class="chp" style="background:#ffcdd2;color:#b71c1c">no recuperable</span>`:""}${pend?`<span class="chp" style="background:#fff3e0;color:#e65100">pendiente</span>`:part?`<span class="chp" style="background:#fff3e0;color:#e65100">a medias</span>`:""}<button class="mini" title="Cambiar peso, mínimo, nombre o dividir en partes" onclick="editPart('${sj}','${it.id}')">✎</button></div>
-  ${it.nt&&!it.custom?`<div class="dim" style="font-size:11px">${esc(it.nt)}</div>`:""}
-  <div class="ng"><label>1.ª conv.${ag.n1?`<input class="num" disabled title="Media de ${ag.n1} nota(s)" value="${f2(ag.g1)}">`:hasP?`<input class="num" disabled title="Se calcula con las partes de abajo" placeholder="—" value="">`:`<input class="num" inputmode="decimal" placeholder="pendiente" value="${g[0]==null?"":g[0]}" onchange="setN('${sj}','${it.id}',0,this.value)">`}</label>
-   <label>2.ª conv.<input class="num" inputmode="decimal" ${it.rec=="no"?`disabled title="No recuperable"`:""} value="${g[1]==null?"":g[1]}" onchange="setN('${sj}','${it.id}',1,this.value)"></label>
-   <span class="nap">aporta ${ap}</span><span class="nap">necesitas ${nd}</span></div>
+ const show2=!!(r.fail||g[1]!=null||(r.g!=null&&r.g<5&&it.rec!="no"));      // la 2.ª convocatoria solo sale cuando hace falta
+ const nd=r.pw>1e-9&&r.need!=null?(c.feasible===false&&r.need>10?`<span style="color:#c62828">no llegas</span>`:`necesitas <b>${f2(r.need)}</b>`):"";
+ return `<div class="nit ${r.fail?"fail":""}"><div class="nh"><b>${esc(it.n)}</b>${ty?`<span class="chp">${TYL[ty]||esc(ty)}</span>`:""}<span class="chp">${f2(it.w)} %</span>${it.min!=null?`<span class="chp">mín. ${f2(it.min)}</span>`:""}${pend?`<span class="chp" style="background:#fff3e0;color:#e65100">pendiente</span>`:part?`<span class="chp" style="background:#fff3e0;color:#e65100">a medias</span>`:""}<button class="mini" title="Editar: peso, mínimo, bloque, partes o quitar" onclick="editPart('${sj}','${it.id}')">✎</button></div>
+  <div class="ng"><label>Nota${ag.n1?`<input class="num" disabled title="Media de ${ag.n1} nota(s)" value="${f2(ag.g1)}">`:hasP?`<input class="num" disabled title="Se calcula con las partes de abajo" placeholder="—" value="">`:`<input class="num" inputmode="decimal" placeholder="pendiente" value="${g[0]==null?"":g[0]}" onchange="setN('${sj}','${it.id}',0,this.value)">`}</label>
+   ${show2?`<label>2.ª conv.<input class="num" inputmode="decimal" ${it.rec=="no"?`disabled title="No recuperable"`:""} value="${g[1]==null?"":g[1]}" onchange="setN('${sj}','${it.id}',1,this.value)"></label>`:""}
+   <span class="nap">${nd}</span></div>
   ${subsDiv(sj,sc,it)}</div>`}
-function blockHTML(sj,c,sc,b){const rows=b.items.map(it=>c.rows.find(x=>x.it.id==it.id)).filter(Boolean),W=b.items.reduce((s,x)=>s+x.w,0),gr=rows.filter(r=>r.frac>0&&!r.rep),Wg=gr.reduce((s,r)=>s+r.it.w*r.frac,0),avg=Wg?gr.reduce((s,r)=>s+r.it.w*r.frac*r.g,0)/Wg:null,np=rows.filter(r=>r.pw>1e-9).length;
- return `<details class="nbk" ${nbOpen.has(sj+"|"+b.id)?"open":""} ontoggle="togNb('${sj}','${b.id}',this.open)"><summary class="nbh"><b style="flex:1;min-width:120px">${esc(b.n)}</b><span class="chp" title="Peso de todo el apartado en la nota final">${f2(W)} %</span>${avg!=null?`<span class="chp" style="background:${avg>=5?"#c8e6c9":"#ffcdd2"};color:${avg>=5?"#1b5e20":"#b71c1c"}">media ${f2(avg)}</span>`:`<span class="chp">sin notas</span>`}${np?`<span class="chp" style="background:#fff3e0;color:#e65100">${np} pendiente${np>1?"s":""}</span>`:""}</summary>${b.items.map(it=>itemRow(sj,c,sc,it)).join("")||`<div class="nit dim">Este apartado aún no tiene notas.</div>`}<div class="nit"><button class="mini" onclick="addNota('${sj}','${b.id}')">＋ Añadir nota a «${esc(b.n)}»</button></div></details>`}
+function blockHTML(sj,c,sc,b){const rows=b.items.map(it=>c.rows.find(x=>x.it.id==it.id)).filter(Boolean),W=b.items.reduce((s,x)=>s+x.w,0),gr=rows.filter(r=>r.frac>0&&!r.rep&&r.g!=null),Wg=gr.reduce((s,r)=>s+r.it.w*r.frac,0),avg=Wg?gr.reduce((s,r)=>s+r.it.w*r.frac*r.g,0)/Wg:null,np=rows.filter(r=>r.pw>1e-9).length,full=rows.length>0&&rows.every(r=>r.frac>=1-1e-9&&r.g!=null);
+ let bm="";if(b.min!=null){if(full&&avg!=null){bm=avg>=b.min-1e-9?`<span class="chp" style="background:#c8e6c9;color:#1b5e20">mín. media ${f2(b.min)} ✔</span>`:`<span class="chp" style="background:#ffcdd2;color:#b71c1c">media ${f2(avg)} &lt; mín. ${f2(b.min)}</span>`}
+  else{const pendW=rows.reduce((s,r)=>s+r.it.w*(1-(r.frac||0)),0),got=rows.reduce((s,r)=>s+(r.frac>0&&r.g!=null?r.it.w*r.frac*r.g:0),0),need=pendW>1e-9?(b.min*W-got)/pendW:0;
+   bm=`<span class="chp">mín. media ${f2(b.min)}${pendW>1e-9?(need>10+1e-9?` · no se llega ✖`:` · necesitas ${f2(Math.max(0,need))} de media en lo pendiente`):""}</span>`}}
+ return `<details class="nbk" ${nbOpen.has(sj+"|"+b.id)?"open":""} ontoggle="togNb('${sj}','${b.id}',this.open)"><summary class="nbh"><b style="flex:1;min-width:120px">${esc(b.n)}</b><span class="chp" title="Peso de todo el bloque en la nota final">${f2(W)} %</span>${avg!=null?`<span class="chp" title="Media ponderada de las notas ya puestas de este bloque" style="background:${avg>=5?"#c8e6c9":"#ffcdd2"};color:${avg>=5?"#1b5e20":"#b71c1c"}">media ${f2(avg)}${np?` (${gr.length} de ${rows.length})`:""}</span>`:`<span class="chp">sin notas</span>`}${bm}${np?`<span class="chp" style="background:#fff3e0;color:#e65100">${np} pendiente${np>1?"s":""}</span>`:""}<button class="mini" title="Editar el bloque: nombre, nota mínima o quitarlo" onclick="event.preventDefault();event.stopPropagation();editBlock('${sj}','${b.id}')">✎</button></summary>${b.items.map(it=>itemRow(sj,c,sc,it)).join("")||`<div class="nit dim">Este apartado aún no tiene notas.</div>`}<div class="nit"><button class="mini" onclick="addNota('${sj}','${b.id}')">＋ Añadir nota a «${esc(b.n)}»</button></div></details>`}
 function noteTxt(sj,c){const st=nst(sj);let s="";
  if(c.sp){s=c.Wp==0?(c.exento?`Nota de curso <b>${f2(c.pts)}</b>: exento de examen.`:`Nota de curso <b>${f2(c.pts)}</b> (&lt;5): hay examen. Para llegar a ${st.T} necesitas un <b>${f2(c.needExam)}</b> en el examen (final = 60 % curso + 40 % examen).${c.final!=null?` Nota final: <b>${f2(c.final)}</b>.`:""}`):`Llevas ${f2(c.pts)} puntos de curso con el ${f2(c.Wd)} % evaluado. Para un 5 de curso (sin examen) necesitas de media un <b>${f2(c.needCurso)}</b> en lo que falta.`}
  else{const lost=c.rows.filter(r=>r.lost);
@@ -884,7 +894,7 @@ function subjNotas(sj,c){const st=nst(sj),sc=schOf(sj),N=NOTAS[sj],sumW=sc.items
   <span style="flex:1"></span><label class="dim" title="Al cambiarlo se recalculan las horas de estudio de esta asignatura">Objetivo (5-10) <input class="num" style="width:60px" value="${st.T}" onchange="setT('${sj}',this.value)"></label></div>
   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="chp" title="Horas del plan frente al plan base (objetivo 7)">horas ×${f2(mult(sj))} · ${f2(plannedH(sj))} h en el calendario</span><a href="https://ubuvirtual.ubu.es/mod/guiadocente/get_guiadocente.php?asignatura=${N.id}&cursoacademico=2026" target="_blank" rel="noopener">Guía docente ↗</a></div>
   <div class="dim" style="margin:6px 0;font-size:12px">${sc.rule}</div>
-  ${Math.abs(sumW-100)>0.05&&!c.sp?`<div class="note" style="border-color:#e65100">⚠ Los pesos de los apartados suman ${f2(sumW)} %, no 100 %. Revísalos con ✎.</div>`:""}`;
+  ${Math.abs(sumW-100)>0.05&&!c.sp?`<div class="note" style="border-color:#e65100">⚠ Los pesos de los apartados suman ${f2(sumW)} %, no 100 %. <button class="mini" onclick="normN('${sj}')">Ajustar al 100 %</button> o revísalos con ✎.</div>`:""}`;
  sc.blocks.forEach(b=>{h+=blockHTML(sj,c,sc,b)});
  if(c.sp){const ex=c.exam||[null,null];h+=`<div class="nbk"><div class="nbh"><b style="flex:1">Examen (solo si el curso es menor de 5)</b><span class="chp">40 %</span></div><div class="nit"><div class="ng"><label>1.ª conv.<input class="num" inputmode="decimal" value="${ex[0]==null?"":ex[0]}" onchange="setN('PT2','exam',0,this.value)"></label><label>2.ª conv.<input class="num" inputmode="decimal" value="${ex[1]==null?"":ex[1]}" onchange="setN('PT2','exam',1,this.value)"></label><span class="nap">necesitas ${c.needExam!=null?`<b>${f2(c.needExam)}</b>`:"—"}</span></div></div></div>`}
  if(N.aux){const ax=st.aux||{};h+=`<div class="nbk" style="opacity:.95"><div class="nbh" style="background:var(--ctx)"><b style="flex:1">${N.aux.n}</b></div><div class="nit"><div class="dim" style="font-size:12px;margin-bottom:6px">${N.aux.nt}</div><div class="ng">`+N.aux.items.map(a=>`<label>${a.n}<input class="num" inputmode="decimal" placeholder="nota / NP" value="${ax[a.id]==null?"":ax[a.id]}" onchange="setAux('${sj}','${a.id}',this.value)"><span class="dim" style="font-size:10px">${a.w}</span></label>`).join("")+`</div></div></div>`}
@@ -900,14 +910,16 @@ function notas(){
  return h}
 /* ---- añadir nota: apartado → qué nota es (existente u otra nueva) → nota opcional; el % del apartado se reparte ---- */
 const TYS=[["parcial","Parcial"],["final","Final"],["continua","Evaluación continua"],["práctica","Práctica"],["trabajo","Trabajo"],["entrega","Entrega"],["exposición","Exposición"],["otro","Otro (pongo yo el nombre)"]];
-function notaForm(sj,bid,sel,keep){const sc=schOf(sj),b=sc.blocks.find(x=>x.id==bid)||sc.blocks[0];keep=keep||{};const nw=(sel||"__new")=="__new";
+const isExamBlock=b=>/^ex[aá]menes?|parcial|prueba/i.test(b.n);
+const tysFor=b=>{const ok=isExamBlock(b)?["parcial","final","continua","otro"]:["práctica","trabajo","entrega","exposición","continua","otro"];return ok.map(k=>TYS.find(x=>x[0]==k)).filter(Boolean)};
+function notaForm(sj,bid,sel,keep){const sc=schOf(sj),b=sc.blocks.find(x=>x.id==bid)||sc.blocks[0];keep=keep||{};const nw=(sel||"__new")=="__new",tl=tysFor(b),t0=keep.t&&tl.some(x=>x[0]==keep.t)?keep.t:tl[0][0];
  const st=nst(sj),W=b.items.reduce((s,x)=>s+x.w,0);
  return `<button onclick="closePan()" style="float:right">Cerrar</button><h3>Añadir nota</h3><div class="frm">
  <label>Asignatura<select id="nf_s" onchange="nfRe('s')">${Object.keys(NOTAS).map(k=>`<option value="${k}" ${k==sj?"selected":""}>${S[k].name}</option>`).join("")}</select></label>
  <label>Apartado<select id="nf_b" onchange="nfRe('b')">${sc.blocks.map(x=>`<option value="${x.id}" ${x.id==b.id?"selected":""}>${esc(x.n)} · ${f2(x.items.reduce((s,y)=>s+y.w,0))} %</option>`).join("")}</select></label>
  <label>Qué nota es<select id="nf_i" onchange="nfRe('i')"><option value="__new" ${nw?"selected":""}>＋ Una nota nueva en este apartado</option>${b.items.map(x=>`<option value="${x.id}" ${sel==x.id?"selected":""}>${esc(x.n)} · ${f2(x.w)} %${((st.g[sc.k+":"+x.id]||[])[0]!=null)?" (ya tiene nota)":""}</option>`).join("")}</select></label>
- ${nw?`<label>Tipo<select id="nf_t" onchange="nfRe('t')">${TYS.map(([k,n])=>`<option value="${k}" ${(keep.t||"parcial")==k?"selected":""}>${n}</option>`).join("")}</select></label>
- <label>Nombre de la nota<input id="nf_n" type="text" placeholder="${(keep.t||"parcial")=="otro"?"Escribe el nombre":"Si lo dejas vacío: "+(TYL[keep.t||"parcial"])}" value="${esc(keep.n||"")}"></label>
+ ${nw?`<label>Tipo<select id="nf_t" onchange="nfRe('t')">${tl.map(([k,n])=>`<option value="${k}" ${t0==k?"selected":""}>${n}</option>`).join("")}</select></label>
+ <label>Nombre de la nota<input id="nf_n" type="text" placeholder="${t0=="otro"?"Escribe el nombre":"Si lo dejas vacío: "+TYL[t0]}" value="${esc(keep.n||"")}"></label>
  ${(()=>{const gp=genericSlot(sj,sc,b);return gp?`<label style="flex-direction:row;align-items:center;gap:8px;font-size:13px;color:var(--ink)"><input id="nf_r" type="checkbox" style="width:auto;margin:0" ${keep.r==="0"||(keep.r===undefined&&b.id!="tr")?"":"checked"} onchange="nfRe('r')"> Esta nota ocupa el sitio de «${esc(gp.n)}» (${f2(gp.w)} %), que aún no tiene nota</label>`:""})()}`:""}
  <label>Nota (0-10) — opcional<input id="nf_g" inputmode="decimal" placeholder="Déjala vacía si aún no la tienes" value="${esc(keep.g||"")}"></label>
  <div style="margin-top:10px"><button class="on" onclick="saveNota()">Guardar${nw?" nota":""}</button></div>
@@ -915,7 +927,9 @@ function notaForm(sj,bid,sel,keep){const sc=schOf(sj),b=sc.blocks.find(x=>x.id==
 function addNota(sj,bid,sel){sj=sj||(Object.keys(NOTAS).find(k=>nOpen.has(k))||Object.keys(NOTAS)[0]);document.getElementById("pan").innerHTML=notaForm(sj,bid,sel);openPan()}
 function nfRe(w){const g=id=>{const e=document.getElementById(id);return e?e.value:""},keep={t:g("nf_t"),n:g("nf_n"),g:g("nf_g"),r:document.getElementById("nf_r")?(document.getElementById("nf_r").checked?"1":"0"):undefined},sj=g("nf_s");
  document.getElementById("pan").innerHTML=notaForm(sj,w=="s"?null:g("nf_b"),w=="s"||w=="b"?null:g("nf_i"),keep)}
-function genericSlot(sj,sc,b){const st=nst(sj);return b.items.find(it=>!it.custom&&["continua","trabajo","práctica","taller",""].includes(it.ty||tyOf(sj,it.id,sc.k))&&((st.g[sc.k+":"+it.id]||[])[0]==null)&&!((st.subs||{})[sc.k+":"+it.id]||[]).length&&!DATA.exams.some(e=>e.subj==sj&&(exl[exKey(e)]||[]).some(l=>l.p==sc.k+":"+it.id)))}
+function genericSlot(sj,sc,b){const st=nst(sj);if(isExamBlock(b))return null;return b.items.find(it=>!it.custom&&["continua","trabajo","práctica","taller",""].includes(it.ty||tyOf(sj,it.id,sc.k))&&((st.g[sc.k+":"+it.id]||[])[0]==null)&&!((st.subs||{})[sc.k+":"+it.id]||[]).length&&!DATA.exams.some(e=>e.subj==sj&&(exl[exKey(e)]||[]).some(l=>l.p==sc.k+":"+it.id)))}
+function redistOut(sj,sc,me){const b=sc.blocks.find(x=>x.items.some(y=>y.id==me.id)),ty0=me.ty||tyOf(sj,me.id,sc.k);let G=b?b.items.filter(y=>(y.ty||tyOf(sj,y.id,sc.k))==ty0):[];if(G.length<2)G=b?b.items:[];if(G.length<2)G=sc.items;
+ const T=G.reduce((s,y)=>s+y.w,0),rest=T-me.w;if(rest>1e-9)G.filter(y=>y.id!=me.id).forEach(y=>setItemW(sj,sc,y,y.w*T/rest))}
 function setItemW(sj,sc,it,w){const st=nst(sj);if(it.custom){const c=((st.cus||{})[sc.k]||[]).find(x=>x.id==it.id);if(c)c.w=w}else{st.ov=st.ov||{};(st.ov[sc.k]=st.ov[sc.k]||{})[it.id]=Object.assign((st.ov[sc.k]||{})[it.id]||{},{w})}}
 function saveNota(){const g=id=>{const e=document.getElementById(id);return e?e.value:""},sj=g("nf_s"),sc=schOf(sj),b=sc.blocks.find(x=>x.id==g("nf_b"))||sc.blocks[0],iid=g("nf_i"),gt=g("nf_g").trim(),x=pg(gt),st=nst(sj);
  if(gt!==""&&x==null){toast("La nota tiene que ser un número de 0 a 10 (o déjala vacía).");return}
@@ -936,17 +950,20 @@ function editPart(sj,id){const sc=schOf(sj),it=sc.items.find(x=>x.id==id);if(!it
  <label>Nombre<input id="np_n" type="text" value="${esc(it.n)}"></label><label>Peso en la nota final (%)<input id="np_w" inputmode="decimal" value="${f2(it.w)}"></label>
  <label>Nota mínima (vacío = sin mínimo)<input id="np_m" inputmode="decimal" value="${it.min==null?"":f2(it.min)}"></label>
  <label>¿Se recupera en 2.ª conv.?<select id="np_r"><option value="si" ${it.rec=="si"?"selected":""}>Sí</option><option value="no" ${it.rec=="no"?"selected":""}>No</option><option value="nd" ${it.rec=="nd"||!it.rec?"selected":""}>No indicado</option></select></label>
+ <label>Bloque<select id="np_b" onchange="document.getElementById('np_bnl').style.display=this.value=='__new'?'':'none'">${sc.blocks.map(b=>`<option value="${b.id}" ${b.items.some(y=>y.id==id)?"selected":""}>${esc(b.n)}</option>`).join("")}<option value="__new">Otro (escribo el nombre)…</option></select></label>
+ <label id="np_bnl" style="display:none">Nombre del bloque nuevo<input id="np_bn" type="text" placeholder="Exposiciones, Laboratorio…"></label>
  <div class="xs" style="border-top:1px solid var(--line);margin-top:12px;padding-top:10px"><b style="display:block">Partes de este apartado</b>
   <div class="dim" style="font-size:12px;margin:2px 0 6px">Por ejemplo, si la teoría son 2 exámenes, crea «Examen 1» y «Examen 2». No hace falta tener ninguna nota: se rellenan luego. La nota del apartado es la media ponderada de sus partes (el peso es relativo).</div>
   ${pts.map(x=>`<div class="sub"><input class="nm" value="${esc(x.n)}" onchange="parteEd('${sj}','${id}','${x.id}','n',this.value)"><label class="dim">peso <input class="num" style="width:58px" inputmode="decimal" value="${x.w==null?1:x.w}" onchange="parteEd('${sj}','${id}','${x.id}','w',this.value)"></label><span class="chp">${W?f2(100*(x.w==null?1:x.w)/W):0} %</span><button class="mini" title="Quitar esta parte" onclick="parteRm('${sj}','${id}','${x.id}')">✕</button></div>`).join("")||`<div class="dim" style="font-size:12px">Todavía no tiene partes.</div>`}
   <div class="sub" style="margin-top:6px"><input class="nm" id="ep_pn" placeholder="Nombre de la parte (Examen 1…)"><label class="dim">peso <input class="num" id="ep_pw" style="width:58px" inputmode="decimal" value="1"></label><button class="mini" onclick="parteAdd('${sj}','${id}')">＋ Añadir parte</button></div>
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"><span class="dim" style="font-size:12px;align-self:center">Dividir de golpe en</span><button class="mini" onclick="parteSplit('${sj}','${id}',2)">2 partes</button><button class="mini" onclick="parteSplit('${sj}','${id}',3)">3 partes</button><button class="mini" onclick="parteSplit('${sj}','${id}',4)">4 partes</button></div></div>
- <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px"><button class="on" onclick="savePart('${sj}','${id}')">Guardar</button>${!it.custom&&ov?`<button onclick="resetPart('${sj}','${id}')">Volver a la guía</button>`:""}${it.custom?`<button onclick="delPart('${sj}','${id}')" style="color:var(--exam)">Eliminar apartado</button>`:(sc.blocks.find(b=>b.items.some(y=>y.id==id))||{items:[]}).items.length>1?`<button onclick="hidePart('${sj}','${id}')" style="color:var(--exam)" title="Se quita del cálculo y su % se reparte entre los demás de ese apartado">Quitar de la guía</button>`:""}</div>
+ <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px"><button class="on" onclick="savePart('${sj}','${id}')">Guardar</button>${!it.custom&&ov?`<button onclick="resetPart('${sj}','${id}')">Volver a la guía</button>`:""}${it.custom?`<button onclick="delPart('${sj}','${id}')" style="color:var(--exam)">Eliminar apartado</button>`:`<button onclick="hidePart('${sj}','${id}')" style="color:var(--exam)" title="Se quita del cálculo y su % se reparte entre los demás">Quitar este apartado</button>`}</div>
  <p class="dim">Si cambias un peso, comprueba que todos los apartados sigan sumando 100 %.</p></div>`;openPan()}
 function partFields(sj,id,quiet){const st=nst(sj),sc=schOf(sj),g=x=>document.getElementById(x).value,n=g("np_n").trim(),w=parseFloat(g("np_w").replace(",",".")),mm=g("np_m").trim(),m=mm===""?null:parseFloat(mm.replace(",",".")),rec=g("np_r");
  if(!n||!(w>=0)){if(!quiet)toast("Pon un nombre y un peso (0 o más).");return false}
- const cu=((st.cus||{})[sc.k]||[]).find(x=>x.id==id),v={n,w,min:isNaN(m)?null:m,rec};
- if(cu)Object.assign(cu,v);else{st.ov=st.ov||{};(st.ov[sc.k]=st.ov[sc.k]||{})[id]=v}
+ const cu=((st.cus||{})[sc.k]||[]).find(x=>x.id==id),v={n,w,min:isNaN(m)?null:m,rec},nb=document.getElementById("np_b");
+ if(nb){const cur=(sc.blocks.find(b=>b.items.some(y=>y.id==id))||{}).id;if(nb.value!=cur){if(nb.value=="__new"){const bn=(document.getElementById("np_bn").value||"").trim();if(!bn){if(!quiet)toast("Escribe el nombre del bloque nuevo.");return false}v.b="n"+Date.now().toString(36);v.bn=bn}else{v.b=nb.value;v.bn=""}}}
+ if(cu)Object.assign(cu,v);else{st.ov=st.ov||{};(st.ov[sc.k]=st.ov[sc.k]||{})[id]=Object.assign((st.ov[sc.k]||{})[id]||{},v)}
  saveN();return true}
 function savePart(sj,id){if(partFields(sj,id)){closePan();render()}}
 function partesKey(sj,id){return schOf(sj).k+":"+id}
@@ -959,11 +976,26 @@ function parteEd(sj,id,sid,f,v){partFields(sj,id,true);setSub(sj,partesKey(sj,id
 function parteRm(sj,id,sid){partFields(sj,id,true);rmSub(sj,partesKey(sj,id),sid);editPart(sj,id)}
 function resetPart(sj,id){const st=nst(sj),sc=schOf(sj);if(st.ov&&st.ov[sc.k])delete st.ov[sc.k][id];saveN();closePan();render()}
 function delPart(sj,id){const st=nst(sj),sc=schOf(sj),b=sc.blocks.find(x=>x.items.some(y=>y.id==id)),me=sc.items.find(x=>x.id==id);
- if(b&&me){const ty0=me.ty||tyOf(sj,id,sc.k),grp=b.items.filter(y=>(y.ty||tyOf(sj,y.id,sc.k))==ty0),G=grp.length>1?grp:b.items,T=G.reduce((s,y)=>s+y.w,0),rest=T-me.w;if(rest>1e-9)G.filter(y=>y.id!=id).forEach(y=>setItemW(sj,sc,y,y.w*T/rest))}
+ if(me)redistOut(sj,sc,me);
  st.cus[sc.k]=(st.cus[sc.k]||[]).filter(x=>x.id!=id);delete st.g[sc.k+":"+id];if(st.subs)delete st.subs[sc.k+":"+id];saveN();closePan();render()}
 function hidePart(sj,id){const st=nst(sj),sc=schOf(sj),b=sc.blocks.find(x=>x.items.some(y=>y.id==id)),me=sc.items.find(x=>x.id==id);
- if(b&&me){const ty0=me.ty||tyOf(sj,id,sc.k),grp=b.items.filter(y=>(y.ty||tyOf(sj,y.id,sc.k))==ty0),G=grp.length>1?grp:b.items,T=G.reduce((s,y)=>s+y.w,0),rest=T-me.w;if(rest>1e-9)G.filter(y=>y.id!=id).forEach(y=>setItemW(sj,sc,y,y.w*T/rest))}
+ if(me)redistOut(sj,sc,me);
  st.hid=st.hid||{};(st.hid[sc.k]=st.hid[sc.k]||[]).push(id);saveN();closePan();toast("Apartado quitado. Puedes recuperarlo con «Restaurar la guía».");render()}
+function editBlock(sj,bid){const sc=schOf(sj),b=sc.blocks.find(x=>x.id==bid);if(!b)return;const W=b.items.reduce((s,x)=>s+x.w,0);
+ document.getElementById("pan").innerHTML=`<button onclick="closePan()" style="float:right">Cerrar</button><h3>Editar bloque</h3><p class="dim">${tagH(sj)} ${esc(b.n)} · ${f2(W)} % de la nota final · ${b.items.length} apartado${b.items.length>1?"s":""}</p><div class="frm">
+ <label>Nombre del bloque<input id="bk_n" type="text" value="${esc(b.n)}"></label>
+ <label>Nota mínima del bloque (media de todas sus notas; vacío = sin mínimo)<input id="bk_m" inputmode="decimal" value="${b.min==null?"":f2(b.min)}"></label>
+ <p class="dim" style="font-size:12px">Por ejemplo, en Hormigón: «Parciales», mínimo 5 de media entre los 3. Es aparte del mínimo de cada examen, que se pone con ✎ en cada uno.</p>
+ <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="on" onclick="saveBlock('${sj}','${bid}')">Guardar</button><button onclick="delBlock('${sj}','${bid}')" style="color:var(--exam)" title="Se quita del cálculo y su % se reparte entre el resto">Quitar este bloque</button></div></div>`;openPan()}
+function saveBlock(sj,bid){const st=nst(sj),sc=schOf(sj),g=x=>document.getElementById(x).value,n=g("bk_n").trim(),mm=g("bk_m").trim(),m=mm===""?null:parseFloat(mm.replace(",","."));
+ if(!n){toast("Pon un nombre al bloque.");return}st.ov=st.ov||{};(st.ov[sc.k]=st.ov[sc.k]||{})["b:"+bid]={n,min:m==null||isNaN(m)?null:m};saveN();closePan();render()}
+function delBlock(sj,bid){const st=nst(sj),sc=schOf(sj),b=sc.blocks.find(x=>x.id==bid);if(!b)return;
+ const others=sc.items.filter(x=>!b.items.some(y=>y.id==x.id)),Tb=b.items.reduce((s,x)=>s+x.w,0),So=others.reduce((s,x)=>s+x.w,0);
+ if(So>1e-9)others.forEach(y=>setItemW(sj,sc,y,y.w*(So+Tb)/So));
+ st.hid=st.hid||{};st.cus=st.cus||{};b.items.forEach(it=>{if(it.custom){st.cus[sc.k]=(st.cus[sc.k]||[]).filter(x=>x.id!=it.id);delete st.g[sc.k+":"+it.id];if(st.subs)delete st.subs[sc.k+":"+it.id]}else(st.hid[sc.k]=st.hid[sc.k]||[]).push(it.id)});
+ saveN();closePan();toast("Bloque quitado. Puedes recuperarlo con «Restaurar la guía».");render()}
+function normN(sj){const sc=schOf(sj),S0=sc.items.reduce((s,x)=>s+x.w,0);if(S0<=1e-9){toast("No hay pesos que ajustar.");return}
+ sc.items.forEach(it=>setItemW(sj,sc,it,it.w*100/S0));saveN();toast("Pesos ajustados: ahora suman 100 %.");render()}
 function addPart(sj){const sc=schOf(sj);
  document.getElementById("pan").innerHTML=`<button onclick="closePan()" style="float:right">Cerrar</button><h3>Añadir apartado o bloque</h3><p class="dim">${tagH(sj)} Para algo que la guía no recoge o que quieres separar.</p><div class="frm">
  <label>Bloque<select id="ap_b">${sc.blocks.map(b=>`<option value="${b.id}">${esc(b.n)}</option>`).join("")}<option value="__new">— bloque nuevo —</option></select></label>
@@ -999,13 +1031,30 @@ function asigDetail(sj){if(!sj||!S[sj])return asigList();const c=NOTAS[sj]?calcN
  h+=det("ta","📋 Tareas",asigTareas(sj));
  h+=det("ho","⏱ Horas",asigHoras(sj));
  return h}
-function asigTareas(sj){const used={},dn={};SES.forEach(s=>{if(s.subj!=sj||!s.task)return;const m=s.end-s.start;if(store[key(s)])dn[s.task]=(dn[s.task]||0)+m;if(!s.missed||store[key(s)])used[s.task]=(used[s.task]||0)+m});
+const aAll=new Set();
+function asigTareas(sj){const nowA=nowAbs(),st=SES.filter(s=>s.subj==sj&&(s.task||s.kind=="fijo"||s.kind=="custom"));
+ const done=st.filter(s=>store[key(s)]),miss=st.filter(s=>!store[key(s)]&&(s.missed||ab(s.date,s.end)<=nowA)),pend=st.filter(s=>!store[key(s)]&&!s.missed&&ab(s.date,s.end)>nowA);
+ const row=s=>{const k=key(s),d=pd(s.date);return `<div class="row${s.missed?" missed":""}"><input type="checkbox" ${store[k]?"checked":""} onchange="toggle('${k.replace(/'/g,"\\'")}',this.checked)"><div class="t" style="min-width:104px">${DIAS[wdi(d)].slice(0,3)} ${d.getDate()} ${MES[d.getMonth()].slice(0,3)} · ${hm(s.start)}–${hm(s.end)}</div><div style="border-left:4px solid ${S[sj].ink};padding-left:8px;flex:1"><b>${esc(s.name)}</b>${s.detail?`<br><span class="dim">${esc(s.detail)}</span>`:""}</div></div>`};
+ const lim=nowA+14*1440,all=aAll.has(sj),nx=all?pend:pend.filter(s=>ab(s.date,s.start)<=lim);
+ let h=`<div class="dim" style="font-size:12px;margin:6px 0">Lo que tienes planeado estudiar de esta asignatura. Márcalo cuando lo hagas.</div>`;
+ if(miss.length)h+=`<div class="sec red">Atrasadas (si las hiciste, márcalas)</div>`+miss.map(row).join("");
+ h+=`<div class="sec">Próximas${all?"":" (14 días)"}</div>`+(nx.length?nx.map(row).join(""):`<p class="dim">Nada pendiente.</p>`)+(pend.length>nx.length?`<p><button class="mini" onclick="aAll.add('${sj}');render()">Ver todas (${pend.length})</button></p>`:"");
+ if(done.length)h+=`<div class="sec">Hechas (${done.length})</div>`+[...done].reverse().slice(0,8).map(row).join("")+(done.length>8?`<div class="dim" style="font-size:12px">…y ${done.length-8} más. Todas están en la pestaña Hecho / Pendiente.</div>`:"");
+ return h}
+function asigDist(sj){const used={},dn={};SES.forEach(s=>{if(s.subj!=sj||!s.task)return;const m=s.end-s.start;if(store[key(s)])dn[s.task]=(dn[s.task]||0)+m;if(!s.missed||store[key(s)])used[s.task]=(used[s.task]||0)+m});
  const fd=a=>{const d=new Date(a*6e4);return `${d.getUTCDate()}/${d.getUTCMonth()+1}`},ts=DATA.tasks.filter(t=>t.subj==sj);
  if(!ts.length)return `<p class="dim">Esta asignatura no tiene tareas de estudio.</p><p><button onclick="goTab('tareas')">＋ Añadir una tarea</button></p>`;
  return `<div class="dim" style="font-size:12px;margin:6px 0">Cambia las «horas objetivo» y el plan se recalcula solo. Pon 0 para quitar una tarea.</div>`+ts.map(t=>`<div class="nit" style="border:1px solid var(--line);border-radius:10px;margin:6px 0"><div class="nh"><b>${esc(t.name)}${ovr[t.id]!=null?" ✎":""}</b><span class="chp">${fd(t.frm)} → ${fd(t.until)}</span></div><div class="ng"><label>Objetivo (h)<input class="num" type="number" min="0" step="0.25" value="${tt(t)/60}" onchange="setH('${t.id}',this.value)"></label><span class="nap">planificadas ${((used[t.id]||0)/60).toFixed(1)} h</span><span class="nap">hechas ${((dn[t.id]||0)/60).toFixed(1)} h</span></div></div>`).join("")+`<p><button onclick="goTab('tareas')">＋ Añadir una tarea</button></p>`}
+/* tipo de estudio de una tarea, a partir de su nombre */
+function tipoHoras(name){const n=String(name).toLowerCase();if(/te[oó]r|resum|preguntas|cuestionario/.test(n))return "Teoría";if(/pr[aá]ctic|problem|ejercicio|simulac|roca|laborat|taller/.test(n))return "Práctica";if(/proyecto|trabajo|entrega|presentaci/.test(n))return "Proyecto y trabajos";return "General y repaso"}
+function asigTipos(sj){const m={};SES.filter(s=>s.subj==sj&&(!s.missed||store[key(s)])).forEach(s=>{const t=DATA.tasks.find(x=>x.id==s.task),ti=tipoHoras(t?t.name:s.name),h=(s.end-s.start)/60;m[ti]=m[ti]||{p:0,d:0};m[ti].p+=h;if(store[key(s)])m[ti].d+=h});
+ const ks=["Teoría","Práctica","Proyecto y trabajos","General y repaso"].filter(k=>m[k]);if(!ks.length)return `<p class="dim">Aún no hay horas planificadas.</p>`;
+ const tot=ks.reduce((s,k)=>s+m[k].p,0);
+ return `<div class="dim" style="font-size:12px;margin:6px 0">Horas de estudio planificadas y hechas según el tipo de tarea (por su nombre).</div>`+ks.map(k=>`<div style="margin:8px 0"><div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><b>${k}</b><span class="chp">${f2(m[k].p)} h · ${tot?Math.round(100*m[k].p/tot):0} % del total</span><span class="dim" style="font-size:12px">hechas ${f2(m[k].d)} h</span></div><div class="bar2" style="margin-top:4px"><div style="width:${m[k].p?m[k].d/m[k].p*100:0}%;background:${S[sj].ink}"></div></div></div>`).join("")}
 function asigHoras(sj){const w={};let tot=0,dn=0;SES.filter(s=>s.subj==sj&&(!s.missed||store[key(s)])).forEach(s=>{const d=pd(s.date),m=new Date(d);m.setDate(d.getDate()-wdi(d));const k=iso(m),hh=(s.end-s.start)/60;w[k]=(w[k]||0)+hh;tot+=hh;if(store[key(s)])dn+=hh});
- const ks=Object.keys(w).sort();
- return `<div style="margin:8px 0;display:flex;align-items:center;gap:8px"><div class="bar2" style="flex:1"><div style="width:${tot?dn/tot*100:0}%;background:${S[sj].ink}"></div></div><b>${tot?Math.round(dn/tot*100):0} %</b></div><div class="dim" style="margin-bottom:6px">Hechas ${dn.toFixed(1)} h de ${tot.toFixed(1)} h planificadas.</div>`+(ks.length?`<div style="display:flex;flex-wrap:wrap;gap:6px">`+ks.map(k=>{const d=pd(k);return `<span class="chp">${d.getDate()} ${MES[d.getMonth()].slice(0,3)} · ${w[k].toFixed(1)} h</span>`}).join("")+`</div><div class="dim" style="font-size:11px;margin-top:4px">Horas por semana (lunes de cada semana).</div>`:"")}
+ const ks=Object.keys(w).sort(),sub=(k,tit,body)=>`<details class="sdet" ${aOpen.has(sj+"|"+k)?"open":""} ontoggle="aOpen[this.open?'add':'delete']('${sj}|${k}')" style="margin-top:10px"><summary style="cursor:pointer;font-weight:700">${tit}</summary>${body}</details>`;
+ return `<div style="margin:8px 0;display:flex;align-items:center;gap:8px"><div class="bar2" style="flex:1"><div style="width:${tot?dn/tot*100:0}%;background:${S[sj].ink}"></div></div><b>${tot?Math.round(dn/tot*100):0} %</b></div><div class="dim" style="margin-bottom:6px">Hechas ${dn.toFixed(1)} h de ${tot.toFixed(1)} h planificadas.</div>`+(ks.length?`<div style="display:flex;flex-wrap:wrap;gap:6px">`+ks.map(k=>{const d=pd(k);return `<span class="chp">${d.getDate()} ${MES[d.getMonth()].slice(0,3)} · ${w[k].toFixed(1)} h</span>`}).join("")+`</div><div class="dim" style="font-size:11px;margin-top:4px">Horas por semana (lunes de cada semana).</div>`:"")
+  +sub("di","📊 Distribución de horas",asigDist(sj))+sub("ti","🧮 Horas por tipo: teoría, práctica…",asigTipos(sj))}
 /* aviso del próximo examen (y la próxima entrega) en Día, Semana y Mes */
 function nextBanner(){const now=Date.now(),td0=pd(today),endMs=e=>pd(e.date).getTime()+e.end*6e4,apr=new Set(Object.keys(NOTAS).filter(sj=>calcN(sj).state=="ok"));
  const ok=DATA.exams.filter(e=>e.cierto&&endMs(e)>now&&!hidden.has(e.subj)&&!(e.conv=="2C"&&apr.has(e.subj))).sort((a,b)=>a.date.localeCompare(b.date)||a.start-b.start);
@@ -1026,6 +1075,7 @@ let tx=0,ty=0;
 document.addEventListener("touchstart",e=>{tx=e.touches[0].clientX;ty=e.touches[0].clientY},{passive:true});
 document.addEventListener("touchend",e=>{if(view!="dia"||document.getElementById("pan").classList.contains("open"))return;if(e.target.closest&&e.target.closest("input,select,textarea"))return;
  const dx=e.changedTouches[0].clientX-tx,dy=e.changedTouches[0].clientY-ty;if(Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*1.6)shiftDay(dx<0?1:-1)},{passive:true});
+try{if(!localStorage.getItem("neri_ha100")){const sc=schOf("HA"),S0=sc.items.reduce((s,x)=>s+x.w,0);if(Math.abs(S0-100)>0.05&&S0>1e-9){sc.items.forEach(it=>setItemW("HA",sc,it,it.w*100/S0));saveN()}localStorage.setItem("neri_ha100","1")}}catch(e){}      // 22 nov: pesos de Hormigón a 100 %
 if(oldPins.length){snap=replan(DATA.sessions.concat(oldPins),nowAbs());saveSnap()}   // plan regenerado: se conservan las sesiones fijadas por Neri
 refresh();
 document.getElementById("next").innerHTML=upcoming();
