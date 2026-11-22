@@ -830,11 +830,11 @@ function nAll(o){o?Object.keys(NOTAS).forEach(k=>nOpen.add(k)):nOpen.clear();sav
 const NST={ok:["Aprobada","#2e7d32"],susp:["Suspensa (media <5)","#c62828"],lost:["Parte no recuperable suspensa","#c62828"],rep:["Repetir partes en 2.ª conv.","#e65100"],prog:["En curso","var(--mute)"],curso:["En curso","var(--mute)"],examen:["Falta nota de examen","#e65100"]};
 const subsDiv=(sj,sc,it)=>subsHTML(sj,sc,it).replace('<tr class="subs"><td colspan="8">','<div class="subs2">').replace("</td></tr>","</div>");
 function itemRow(sj,c,sc,it){const r=c.rows.find(x=>x.it.id==it.id)||{},st=nst(sj),k=sc.k+":"+it.id,g=st.g[k]||[null,null],ag=r.ag||{n1:0};
- const ap=r.g!=null&&!r.rep?`${f2(it.w/100*r.g)} / ${f2(it.w/10)}`:"—";
+ const hasP=((st.subs||{})[k]||[]).length>0,ap=r.g!=null&&!r.rep?`${f2(it.w/100*r.g)} / ${f2(it.w/10)}`:"—";
  const nd=r.g==null||r.rep?(c.feasible===false&&r.need>10?`<span style="color:#c62828">${f2(r.need)} ✖</span>`:`<b>${f2(r.need??(it.min||0))}</b>`):(r.fail?`<span style="color:#c62828">bajo mínimo</span>`:`<span style="color:#2e7d32">✔</span>`);
  return `<div class="nit ${r.fail?"fail":""}"><div class="nh"><b>${esc(it.n)}</b><span class="chp">${f2(it.w)} %</span>${it.min!=null?`<span class="chp">mín. ${f2(it.min)}</span>`:""}${it.rec=="no"?`<span class="chp" style="background:#ffcdd2;color:#b71c1c">no recuperable</span>`:it.rec=="si"?`<span class="chp">recuperable</span>`:""}<button class="mini" title="Cambiar peso, mínimo o nombre" onclick="editPart('${sj}','${it.id}')">✎</button></div>
   ${it.nt?`<div class="dim" style="font-size:11px">${esc(it.nt)}</div>`:""}
-  <div class="ng"><label>1.ª conv.${ag.n1?`<input class="num" disabled title="Media de ${ag.n1} nota(s)" value="${f2(ag.g1)}">`:`<input class="num" inputmode="decimal" value="${g[0]==null?"":g[0]}" onchange="setN('${sj}','${it.id}',0,this.value)">`}</label>
+  <div class="ng"><label>1.ª conv.${ag.n1?`<input class="num" disabled title="Media de ${ag.n1} nota(s)" value="${f2(ag.g1)}">`:hasP?`<input class="num" disabled title="Se calcula con las partes de abajo" placeholder="—" value="">`:`<input class="num" inputmode="decimal" value="${g[0]==null?"":g[0]}" onchange="setN('${sj}','${it.id}',0,this.value)">`}</label>
    <label>2.ª conv.<input class="num" inputmode="decimal" ${it.rec=="no"?`disabled title="No recuperable"`:""} value="${g[1]==null?"":g[1]}" onchange="setN('${sj}','${it.id}',1,this.value)"></label>
    <span class="nap">aporta ${ap}</span><span class="nap">necesitas ${nd}</span><button class="mini" onclick="addNota('${sj}','${sc.blocks.find(b=>b.items.some(x=>x.id==it.id)).id}','${it.id}')">＋ nota</button></div>
   ${subsDiv(sj,sc,it)}</div>`}
@@ -888,18 +888,33 @@ function saveNota(){const g=id=>document.getElementById(id).value,sj=g("nf_s"),s
  const st=nst(sj),key=sc.k+":"+pid;st.subs=st.subs||{};const a=st.subs[key]=st.subs[key]||[];
  a.push({id:Date.now().toString(36)+Math.floor(Math.random()*1e3),n:g("nf_n").trim()||("Nota "+(a.length+1)),g:x,w:pw(g("nf_w")||"1")});nOpen.add(sj);saveNOpen();saveN();closePan();toast("Nota guardada en "+S[sj].name);render()}
 /* ---- editar un apartado, añadir apartados o bloques, restaurar la guía ---- */
-function editPart(sj,id){const sc=schOf(sj),it=sc.items.find(x=>x.id==id);if(!it)return;const ov=(((nst(sj).ov||{})[sc.k])||{})[id];
+function editPart(sj,id){const sc=schOf(sj),it=sc.items.find(x=>x.id==id);if(!it)return;const st=nst(sj),key=sc.k+":"+id,ov=(((st.ov||{})[sc.k])||{})[id],pts=(st.subs||{})[key]||[],W=pts.reduce((s,x)=>s+(x.w==null?1:x.w),0);
+ const keep=document.getElementById("np_n")?{n:document.getElementById("np_n").value}:null;
  document.getElementById("pan").innerHTML=`<button onclick="closePan()" style="float:right">Cerrar</button><h3>Editar apartado</h3><p class="dim">${tagH(sj)} ${it.custom?"Apartado añadido por ti":"Apartado de la guía"}</p><div class="frm">
  <label>Nombre<input id="np_n" type="text" value="${esc(it.n)}"></label><label>Peso en la nota final (%)<input id="np_w" inputmode="decimal" value="${f2(it.w)}"></label>
  <label>Nota mínima (vacío = sin mínimo)<input id="np_m" inputmode="decimal" value="${it.min==null?"":f2(it.min)}"></label>
  <label>¿Se recupera en 2.ª conv.?<select id="np_r"><option value="si" ${it.rec=="si"?"selected":""}>Sí</option><option value="no" ${it.rec=="no"?"selected":""}>No</option><option value="nd" ${it.rec=="nd"||!it.rec?"selected":""}>No indicado</option></select></label>
- <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="on" onclick="savePart('${sj}','${id}')">Guardar</button>${!it.custom&&ov?`<button onclick="resetPart('${sj}','${id}')">Volver a la guía</button>`:""}${it.custom?`<button onclick="delPart('${sj}','${id}')" style="color:var(--exam)">Eliminar</button>`:""}</div>
+ <div class="xs" style="border-top:1px solid var(--line);margin-top:12px;padding-top:10px"><b style="display:block">Partes de este apartado</b>
+  <div class="dim" style="font-size:12px;margin:2px 0 6px">Por ejemplo, si la teoría son 2 exámenes, crea «Examen 1» y «Examen 2». No hace falta tener ninguna nota: se rellenan luego. La nota del apartado es la media ponderada de sus partes (el peso es relativo).</div>
+  ${pts.map(x=>`<div class="sub"><input class="nm" value="${esc(x.n)}" onchange="parteEd('${sj}','${id}','${x.id}','n',this.value)"><label class="dim">peso <input class="num" style="width:58px" inputmode="decimal" value="${x.w==null?1:x.w}" onchange="parteEd('${sj}','${id}','${x.id}','w',this.value)"></label><span class="chp">${W?f2(100*(x.w==null?1:x.w)/W):0} %</span><button class="mini" title="Quitar esta parte" onclick="parteRm('${sj}','${id}','${x.id}')">✕</button></div>`).join("")||`<div class="dim" style="font-size:12px">Todavía no tiene partes.</div>`}
+  <div class="sub" style="margin-top:6px"><input class="nm" id="ep_pn" placeholder="Nombre de la parte (Examen 1…)"><label class="dim">peso <input class="num" id="ep_pw" style="width:58px" inputmode="decimal" value="1"></label><button class="mini" onclick="parteAdd('${sj}','${id}')">＋ Añadir parte</button></div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"><span class="dim" style="font-size:12px;align-self:center">Dividir de golpe en</span><button class="mini" onclick="parteSplit('${sj}','${id}',2)">2 partes</button><button class="mini" onclick="parteSplit('${sj}','${id}',3)">3 partes</button><button class="mini" onclick="parteSplit('${sj}','${id}',4)">4 partes</button></div></div>
+ <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px"><button class="on" onclick="savePart('${sj}','${id}')">Guardar</button>${!it.custom&&ov?`<button onclick="resetPart('${sj}','${id}')">Volver a la guía</button>`:""}${it.custom?`<button onclick="delPart('${sj}','${id}')" style="color:var(--exam)">Eliminar apartado</button>`:""}</div>
  <p class="dim">Si cambias un peso, comprueba que todos los apartados sigan sumando 100 %.</p></div>`;openPan()}
-function savePart(sj,id){const st=nst(sj),sc=schOf(sj),g=x=>document.getElementById(x).value,n=g("np_n").trim(),w=parseFloat(g("np_w").replace(",",".")),mm=g("np_m").trim(),m=mm===""?null:parseFloat(mm.replace(",",".")),rec=g("np_r");
- if(!n||!(w>=0)){toast("Pon un nombre y un peso (0 o más).");return}
+function partFields(sj,id,quiet){const st=nst(sj),sc=schOf(sj),g=x=>document.getElementById(x).value,n=g("np_n").trim(),w=parseFloat(g("np_w").replace(",",".")),mm=g("np_m").trim(),m=mm===""?null:parseFloat(mm.replace(",",".")),rec=g("np_r");
+ if(!n||!(w>=0)){if(!quiet)toast("Pon un nombre y un peso (0 o más).");return false}
  const cu=((st.cus||{})[sc.k]||[]).find(x=>x.id==id),v={n,w,min:isNaN(m)?null:m,rec};
  if(cu)Object.assign(cu,v);else{st.ov=st.ov||{};(st.ov[sc.k]=st.ov[sc.k]||{})[id]=v}
- saveN();closePan();render()}
+ saveN();return true}
+function savePart(sj,id){if(partFields(sj,id)){closePan();render()}}
+function partesKey(sj,id){return schOf(sj).k+":"+id}
+function parteAdd(sj,id,nm,w){partFields(sj,id,true);const st=nst(sj),key=partesKey(sj,id);st.subs=st.subs||{};const a=st.subs[key]=st.subs[key]||[];
+ const n=nm!=null?nm:document.getElementById("ep_pn").value.trim(),pwv=w!=null?w:pw(document.getElementById("ep_pw").value||"1");
+ a.push({id:Date.now().toString(36)+Math.floor(Math.random()*1e4),n:n||("Parte "+(a.length+1)),g:null,w:pwv});saveN();nOpen.add(sj);saveNOpen();render();editPart(sj,id)}
+function parteSplit(sj,id,k){partFields(sj,id,true);const st=nst(sj),key=partesKey(sj,id);st.subs=st.subs||{};const a=st.subs[key]=st.subs[key]||[];
+ for(let i=a.length;i<k;i++)a.push({id:Date.now().toString(36)+i+Math.floor(Math.random()*1e4),n:"Parte "+(i+1),g:null,w:1});saveN();nOpen.add(sj);saveNOpen();render();editPart(sj,id)}
+function parteEd(sj,id,sid,f,v){partFields(sj,id,true);setSub(sj,partesKey(sj,id),sid,f,v);editPart(sj,id)}
+function parteRm(sj,id,sid){partFields(sj,id,true);rmSub(sj,partesKey(sj,id),sid);editPart(sj,id)}
 function resetPart(sj,id){const st=nst(sj),sc=schOf(sj);if(st.ov&&st.ov[sc.k])delete st.ov[sc.k][id];saveN();closePan();render()}
 function delPart(sj,id){const st=nst(sj),sc=schOf(sj);st.cus[sc.k]=(st.cus[sc.k]||[]).filter(x=>x.id!=id);delete st.g[sc.k+":"+id];if(st.subs)delete st.subs[sc.k+":"+id];saveN();closePan();render()}
 function addPart(sj){const sc=schOf(sj);
