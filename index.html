@@ -343,9 +343,9 @@ function dropDay(ev,date){ev.preventDefault();if(!DRAG)return;const k=DRAG.k;DRA
 const opts=(a,v)=>a.map(([x,n])=>`<option value="${x}" ${x==v?"selected":""}>${n}</option>`).join("");
 function formS(s,isNew){const free=isNew||!s.task;const tk=DATA.tasks.filter(t=>t.subj==s.subj);
  return `<button onclick="back('${s.date}')" style="float:right">Volver</button><h3>${isNew?"Añadir sesión":"Editar sesión"}</h3>
- <div class="frm"><label>Asignatura<select id="f_subj" ${free?"":"disabled"} onchange="fillTasks()">${opts(Object.keys(S).map(k=>[k,S[k].name]),s.subj)}</select></label>
+ <div class="frm"><label>Asignatura<select id="f_subj" ${free?"":"disabled"} onchange="fillTasks()">${opts([...(isNew?[["","— elige la asignatura —"]]:[]),...Object.keys(S).map(k=>[k,S[k].name])],s.subj)}</select></label>
  <label>Tarea (cuenta para sus horas)<select id="f_task" ${free?"":"disabled"}>${opts([["","— libre (no cuenta para ninguna tarea) —"],...tk.map(t=>[t.id,t.name])],s.task||"")}</select></label>
- <label>Título<input id="f_name" type="text" value="${(s.name||"").replace(/"/g,"&quot;")}" ${free?"":"disabled"}></label>
+ <label>Título (opcional)<input id="f_name" type="text" placeholder="Si lo dejas vacío, se llama como la asignatura" value="${(s.name||"").replace(/"/g,"&quot;")}" ${free?"":"disabled"}></label>
  <label>Fecha<input id="f_date" type="date" value="${s.date}"></label>
  <label>Desde<input id="f_ini" type="time" step="900" value="${hm(s.start)}"></label>
  <label>Hasta<input id="f_fin" type="time" step="900" value="${hm(s.end)}"></label>
@@ -357,12 +357,12 @@ function fillTasks(){const sj=document.getElementById("f_subj").value,tk=DATA.ta
 function readF(){const date=document.getElementById("f_date").value,a=tmin(document.getElementById("f_ini").value||"0:0"),b=tmin(document.getElementById("f_fin").value||"0:0");
  if(!date||b<=a){toast("Revisa la fecha y que «Hasta» sea posterior a «Desde».");return null}return {date,start:a,end:b}}
 function editS(i){const s=SES.find(x=>key(x)==dkm[i]);if(!s)return;document.getElementById("pan").innerHTML=formS(s,false);openPan()}
-function addS(date){document.getElementById("pan").innerHTML=formS({date,start:tmin("17:15"),end:tmin("19:15"),subj:"HA",name:"Estudio libre",task:""},true);document.getElementById("pan").classList.add("open")}
+function addS(date){document.getElementById("pan").innerHTML=formS({date,start:tmin("17:15"),end:tmin("19:15"),subj:"",name:"",task:""},true);document.getElementById("pan").classList.add("open")}
 function saveEdit(i){const k=dkm[i];ensureSnap();const s=findS(k);if(!s)return;const f=readF();if(!f)return;const old=key(s);
- Object.assign(s,f,{pin:true});delete s.missed;if(!s.task||document.getElementById("f_name")&&!document.getElementById("f_name").disabled){s.subj=document.getElementById("f_subj").value;s.name=document.getElementById("f_name").value||"Estudio libre";const tk=document.getElementById("f_task").value;if(tk){s.task=tk}else{delete s.task}s.kind=s.kind=="fijo"?"fijo":s.task?"estudio":"custom"}
+ Object.assign(s,f,{pin:true});delete s.missed;if(!s.task||document.getElementById("f_name")&&!document.getElementById("f_name").disabled){s.subj=document.getElementById("f_subj").value||s.subj;s.name=document.getElementById("f_name").value||S[s.subj].name;const tk=document.getElementById("f_task").value;if(tk){s.task=tk}else{delete s.task}s.kind=s.kind=="fijo"?"fijo":s.task?"estudio":"custom"}
  moveKey(old,key(s));openDay=s.date;commit()}
-function saveNew(){const f=readF();if(!f)return;ensureSnap();const tk=document.getElementById("f_task").value;
- const s={...f,subj:document.getElementById("f_subj").value,name:document.getElementById("f_name").value||"Estudio libre",detail:"Añadida por ti",kind:tk?"estudio":"custom",pin:true};if(tk)s.task=tk;
+function saveNew(){const f=readF();if(!f)return;const sj=document.getElementById("f_subj").value;if(!sj){toast("Elige la asignatura de la sesión.");return}ensureSnap();const tk=document.getElementById("f_task").value;
+ const s={...f,subj:sj,name:document.getElementById("f_name").value.trim()||S[sj].name,detail:"Añadida por ti",kind:tk?"estudio":"custom",pin:true};if(tk)s.task=tk;
  snap.sessions.push(s);openDay=s.date;commit()}
 function delS(i){const k=dkm[i];ensureSnap();const s=findS(k);if(!s)return;
  if(s.task&&s.kind!="fijo"){const t=DATA.tasks.find(x=>x.id==s.task);if(t){ovr[t.id]=Math.max(0,tt(t)-(s.end-s.start));saveOvr()}}
@@ -419,7 +419,7 @@ function upcoming(){const now=new Date(),t0=new Date(now.getFullYear(),now.getMo
  let h=`<b style="cursor:pointer" onclick="document.getElementById('next').classList.toggle('open')">Próximos eventos (7 días) <span class="chev">▾ toca para ver todos</span></b>`;
  if(!w.length)return h+`<div class="dim">Nada en los próximos 7 días.</div>`;
  w.forEach(e=>{const d=pd(e.date),n=Math.round((d-t0)/864e5),cuando=n==0?"hoy":n==1?"mañana":`en ${n} días`;
-  const tag=e.k=="exam"?`<b style="color:var(--exam)">${e.tipo=="entrega"?"ENTREGA":"EXAMEN"}</b> ${SHORT[e.subj]}${e.cierto?"":" (solo si suspendes)"}`:e.k=="admin"?`🔔 ${e.name}`:`<span style="color:${S[e.subj].color}">●</span> ${e.name}`;
+  const tag=e.k=="exam"?`<b style="color:var(--exam)">${exLab(e)}</b> ${SHORT[e.subj]}${e.cierto?"":" (solo si suspendes)"}`:e.k=="admin"?`🔔 ${e.name}`:`<span style="color:${S[e.subj].color}">●</span> ${e.name}`;
   h+=`<div class="up" onclick="day('${e.date}')"><span class="dim">${DIAS[wdi(d)].slice(0,3)} ${d.getDate()} ${MES[d.getMonth()].slice(0,3)} ${hm(e.start)}</span> · ${tag} · <b>${cuando}</b></div>`});
  return h}
 let openDay=null;
@@ -449,7 +449,7 @@ const MK={festivo:["#b45309","#fff3cd"],cambio:["#1d4ed8","#dbeafe"],fin:["#7e22
 const markHTML=(k,full)=>{const m=DATA.marks[k];return m?`<div class="mk" style="background:${MK[m.k][1]};color:${MK[m.k][0]}" title="${m.txt}">${full?m.txt:m.k=="festivo"?m.txt.split(" · ")[0]:m.k=="fin"?"Fin de clases · horario de viernes":"Cambio docencia · horario de lunes"}</div>`:""};
 const dedTxt=k=>"Día dedicado: "+DATA.dedic[k].map(([s,a,b])=>S[s].name+(DATA.dedic[k].length>1?` (${a?hm(a):"inicio"}–${b>=1440?"fin":hm(b)})`:"")).join(" + ");
 function chipHTML(e){
- if(e.t=="exam"){if(hidden.has(e.subj))return"";return `<div class="ev ex ${e.tipo=="entrega"?"ent":""}" title="${e.name}"><span class="fu">${e.tipo=="entrega"?"📌":"📝"} ${hm(e.start)} ${e.tipo=="entrega"?"ENTREGA":"EXAMEN"} ${SHORT[e.subj]}${e.cierto?"":" (2.ª)"}</span><span class="ab">${e.tipo=="entrega"?"📌":"📝"}${ABR[e.subj]}</span></div>`}
+ if(e.t=="exam"){if(hidden.has(e.subj))return"";return `<div class="ev ex ${e.tipo=="entrega"?"ent":""}" title="${e.name}"><span class="fu">${exIco(e)} ${hm(e.start)} ${exLab(e)} ${SHORT[e.subj]}${e.cierto?"":" (2.ª)"}</span><span class="ab">${exIco(e)}${ABR[e.subj]}</span></div>`}
  if(e.t=="admin")return `<div class="ev ad">${hm(e.start)} ${e.name}</div>`;
  if(e.t=="study"){if(hidden.has(e.subj))return"";const dn=store[key(e)]?" done":e.missed?" missed":"";return `<div class="ev${dn}" draggable="true" ondragstart="ds(event,${reg(key(e))})" style="background:${S[e.subj].color};color:${S[e.subj].ink}" title="${e.detail}">${e.pin?"📌 ":""}<i class="tm" style="font-style:normal">${hm(e.start)} </i><span class="fu">${SHORT[e.subj]}</span><span class="ab">${ABR[e.subj]}</span></div>`}
  return""}
@@ -460,17 +460,20 @@ function month(){const y=cur.getFullYear(),m=cur.getMonth();const first=new Date
  return h+`</div></div>`}
 function week(){const st=new Date(cur);st.setDate(cur.getDate()-wdi(cur));const en=new Date(st);en.setDate(st.getDate()+6);
  let h=`<div class="nav2"><button onclick="cur=new Date(${st.getFullYear()},${st.getMonth()},${st.getDate()-7});render()">◀</button><h2>${st.getDate()} ${MES[st.getMonth()].slice(0,3)} – ${en.getDate()} ${MES[en.getMonth()].slice(0,3)}</h2><button onclick="cur=new Date(${st.getFullYear()},${st.getMonth()},${st.getDate()+7});render()">▶</button></div><div class="card"><div class="wk"><div></div>`;
- for(let i=0;i<7;i++){const d=new Date(st);d.setDate(st.getDate()+i);const kk=iso(d);h+=`<div class="gh ${kk==today?"todayh":""} ${(byDay[kk]||[]).some(e=>e.t=="exam"&&e.tipo!="entrega"&&e.cierto&&!hidden.has(e.subj))?"exh":""}">${DIAS[i].slice(0,3)} ${d.getDate()}${kk==today?" · HOY":""}${DATA.dedic[kk]?` <span title="${dedTxt(kk)}">🎯</span>`:""}${markHTML(kk)}${(byDay[kk]||[]).filter(e=>e.t=="exam"&&!hidden.has(e.subj)).map(e=>`<div class="exb ${e.tipo=="entrega"?"ent":""}" data-s="${ABR[e.subj]}">${e.tipo=="entrega"?"📌 ENTREGA":"📝 EXAMEN"} ${SHORT[e.subj]} · ${hm(e.start)}${e.cierto?"":" (2.ª)"}</div>`).join("")}</div>`}
+ for(let i=0;i<7;i++){const d=new Date(st);d.setDate(st.getDate()+i);const kk=iso(d);h+=`<div class="gh ${kk==today?"todayh":""} ${(byDay[kk]||[]).some(e=>e.t=="exam"&&e.tipo!="entrega"&&e.cierto&&!hidden.has(e.subj))?"exh":""}">${DIAS[i].slice(0,3)} ${d.getDate()}${kk==today?" · HOY":""}${DATA.dedic[kk]?` <span title="${dedTxt(kk)}">🎯</span>`:""}${markHTML(kk)}${(byDay[kk]||[]).filter(e=>e.t=="exam"&&!hidden.has(e.subj)).map(e=>`<div class="exb ${e.tipo=="entrega"?"ent":""}" data-s="${ABR[e.subj]}">${exIco(e)} ${exLab(e)} ${SHORT[e.subj]} · ${hm(e.start)}${e.cierto?"":" (2.ª)"}</div>`).join("")}</div>`}
  h+=`<div class="col" style="border:0">`;for(let x=6;x<=23;x++)h+=`<div class="hr" style="top:${(x-5.5)*36}px">${x}:00</div>`;h+="</div>";
  for(let i=0;i<7;i++){const d=new Date(st);d.setDate(st.getDate()+i);const k=iso(d);h+=`<div class="col ${k==today?"todayc":k<today?"past":""} ${(byDay[k]||[]).some(e=>e.t=="exam"&&e.tipo!="entrega")?"hasex":""}" onclick="day('${k}')" ondragover="event.preventDefault()" ondrop="dropWeek(event,'${k}',this)">`;if(k==today){const n=new Date(),nm=n.getHours()*60+n.getMinutes();h+=`<div class="nowl" style="top:${(nm/60-5.5)*36}px"></div>`}for(let x=6;x<=23;x++)h+=`<div class="hr" style="top:${(x-5.5)*36}px"></div>`;
   (byDay[k]||[]).forEach(e=>{if(e.t=="ctx"&&!ctxOn.has(e.kind))return;if((e.t=="study"||e.t=="exam")&&hidden.has(e.subj))return;
    const top=(e.start/60-5.5)*36,ht=Math.max(16,(e.end-e.start)/60*36-1);const c=e.t=="ctx"?"ctx"+(e.cancelled?" cxl":""):e.t=="exam"?"exm"+(ht<30?" short":"")+(e.tipo=="entrega"?" ent":""):"";const col=e.t=="ctx"?ctxCol(e):e.subj?[S[e.subj].color,S[e.subj].ink]:["#6b7280","#fff"];
    const dg=e.t=="study"?` draggable="true" ondragstart="ds(event,${reg(key(e))})" title="Arrástrame a otro día u hora"`:"";
-   h+=`<div class="blk ${c}${e.t=="study"&&store[key(e)]?" done":""}${e.t=="study"&&e.missed?" missed":""}"${dg} style="top:${top}px;height:${ht}px;background:${col[0]};color:${col[1]}"><b>${e.pin?"📌 ":""}${hm(e.start)}</b> ${e.t=="exam"?(e.tipo=="entrega"?"📌 ENTREGA ":"📝 EXAMEN ")+SHORT[e.subj]:e.t=="ctx"?e.name:(SHORT[e.subj]||e.name)}</div>`});h+="</div>"}
+   h+=`<div class="blk ${c}${e.t=="study"&&store[key(e)]?" done":""}${e.t=="study"&&e.missed?" missed":""}"${dg} style="top:${top}px;height:${ht}px;background:${col[0]};color:${col[1]}"><b>${e.pin?"📌 ":""}${hm(e.start)}</b> ${e.t=="exam"?(exIco(e)+" "+exLab(e)+" ")+SHORT[e.subj]:e.t=="ctx"?e.name:(SHORT[e.subj]||e.name)}</div>`});h+="</div>"}
  return h+`</div></div>`}
 /* ---- Exámenes y Entregas (pestañas separadas), con notas y vínculo con las partes de Notas ---- */
 let exn={};try{exn=JSON.parse(localStorage.getItem("neri_exn")||"{}")}catch(e){}
 const saveExn=()=>{try{localStorage.setItem("neri_exn",JSON.stringify(exn))}catch(e){}};
+/* tipos de evento que Neri puede añadir: examen parcial o final, prueba, exposición, práctica y entrega de trabajo */
+const EVT={parcial:{t:"parcial",n:"Examen parcial"},final:{t:"final",n:"Examen final"},prueba:{t:"prueba",n:"Prueba / control"},exposicion:{t:"prueba",n:"Exposición",lab:"EXPOSICIÓN",ico:"🎤"},practica:{t:"entrega",n:"Práctica",lab:"PRÁCTICA",ico:"📌"},entrega:{t:"entrega",n:"Entrega de trabajo"}};
+const exLab=e=>e.lab||(e.tipo=="entrega"?"ENTREGA":"EXAMEN"),exIco=e=>e.ico||(e.tipo=="entrega"?"📌":"📝");
 const exKey=e=>(e.o?e.o.date:e.date)+"|"+(e.o?e.o.start:e.start)+"|"+e.subj+"|"+e.tipo;      // la clave usa la fecha OFICIAL, así los vínculos y notas no se pierden al mover un examen
 const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");
 /* asignación propuesta examen → parte(s) de Notas (esquema:parte). Se puede cambiar en cada examen */
@@ -552,15 +555,16 @@ function addExForm(kind){const ent=kind=="ent",d0=iso(new Date(Date.now()+7*864e
  const sel=(id,arr,v)=>`<select id="${id}">${arr.map(([k,n])=>`<option value="${k}" ${k==v?"selected":""}>${n}</option>`).join("")}</select>`;
  return `<details class="card" style="margin-top:12px" ${uxOpen[kind]?"open":""} ontoggle="uxOpen['${kind}']=this.open"><summary style="cursor:pointer"><b>＋ Añadir ${ent?"entrega":"examen"}</b> <span class="dim">(lo que te vayan poniendo: parciales nuevos, recuperaciones…)</span></summary>
   <div class="frm" style="margin-top:8px"><label>Asignatura${sel("ux_s",Object.keys(S).map(k=>[k,S[k].name]),"HA")}</label>
-  ${ent?"":`<label>Tipo${sel("ux_t",[["parcial","Parcial"],["final","Final"],["prueba","Prueba / control"]],"parcial")}</label>`}
+  <label>Qué es${sel("ux_t",ent?[["practica","Práctica"],["entrega","Entrega de trabajo"]]:[["parcial","Examen parcial"],["final","Examen final"],["prueba","Prueba / control"],["exposicion","Exposición"]],ent?"practica":"parcial")}</label>
   <label>Convocatoria${sel("ux_c",[["1C","1.ª convocatoria"],["2C","2.ª convocatoria"]],"1C")}</label>
   <label>Fecha<input id="ux_d" type="date" value="${d0}"></label>${timeIn("ux_a",tmin("09:00"),"Empieza")}${timeIn("ux_b",tmin(ent?"09:30":"11:00"),"Termina")}
   <label>Nombre (opcional)<input id="ux_n" type="text" placeholder="${ent?"Entrega práctica 6":"Parcial 3, recuperación…"}"></label>
   <div style="margin-top:10px"><button class="on" onclick="saveUex2('${kind}')">Guardar ${ent?"entrega":"examen"}</button></div>
   <p class="dim">Sale en el calendario, bloquea ese rato y recalcula el plan. Después puedes vincularlo con una parte de Notas y ponerle la nota.</p></div></details>`}
 function saveUex2(kind){const ent=kind=="ent",g=id=>document.getElementById(id).value;
- const e={id:"x"+Date.now().toString(36),date:g("ux_d"),start:tmin(g("ux_a")||"0:0"),end:tmin(g("ux_b")||"0:0"),subj:g("ux_s"),tipo:ent?"entrega":g("ux_t"),conv:g("ux_c"),cierto:true,user:true};
- e.name=g("ux_n").trim()||(ent?"Entrega":e.tipo=="final"?"Examen final":e.tipo=="parcial"?"Parcial":"Prueba");
+ const e={id:"x"+Date.now().toString(36),date:g("ux_d"),start:tmin(g("ux_a")||"0:0"),end:tmin(g("ux_b")||"0:0"),subj:g("ux_s"),tipo:EVT[g("ux_t")].t,conv:EVT[g("ux_t")].t=="entrega"?"1C":g("ux_c"),cierto:true,user:true};
+ if(EVT[g("ux_t")].lab){e.lab=EVT[g("ux_t")].lab;e.ico=EVT[g("ux_t")].ico}
+ e.name=g("ux_n").trim()||EVT[g("ux_t")].n;
  if(!e.date||e.end<=e.start){toast("Revisa la fecha y las horas: «Termina» debe ser posterior a «Empieza».");return}
  e.o={date:e.date,start:e.start,end:e.end,name:e.name};uex.push(e);DATA.exams.push({...e});saveUex();toast((ent?"Entrega":"Examen")+" añadid"+(ent?"a":"o")+": "+S[e.subj].name+" · "+e.date);replanNow()}
 /* editar un examen o entrega (oficial o añadido por Neri) */
@@ -576,6 +580,24 @@ function saveEditEx(i){const k=dkm[i],e=DATA.exams.find(x=>exKey(x)==k);if(!e)re
  else{const o=e.o;if(v.date==o.date&&v.start==o.start&&v.end==o.end&&v.name==o.name)delete eov[k];else eov[k]=v;saveEov();applyEov()}
  closePan();toast("Cambiado: "+S[e.subj].name+" · "+v.date);replanNow()}
 function resetEx(i){const k=dkm[i];delete eov[k];saveEov();applyEov();closePan();toast("Vuelve a la fecha oficial");replanNow()}
+/* añadir examen, práctica o exposición desde el panel del día */
+function evKind(){const k=document.getElementById("ev_k").value,x=EVT[k].t=="entrega";document.getElementById("ev_cl").style.display=x?"none":"";
+ const b=document.getElementById("ev_b");if(b&&!b.dataset.t){b.value=hm(tmin(document.getElementById("ev_a").value||"09:00")+(x?30:120))}}
+function addEvt(k){const kinds=["parcial","final","prueba","exposicion","practica","entrega"];
+ document.getElementById("pan").innerHTML=`<button onclick="back('${k}')" style="float:right">Volver</button><h3>Añadir examen, práctica o exposición</h3><div class="frm">
+ <label>Qué es<select id="ev_k" onchange="evKind()">${kinds.map(x=>`<option value="${x}">${EVT[x].n}</option>`).join("")}</select></label>
+ <label>Asignatura<select id="ev_s"><option value="">— elige la asignatura —</option>${Object.keys(S).map(x=>`<option value="${x}">${S[x].name}</option>`).join("")}</select></label>
+ <label id="ev_cl">Convocatoria<select id="ev_c"><option value="1C">1.ª convocatoria</option><option value="2C">2.ª convocatoria</option></select></label>
+ <label>Título (opcional)<input id="ev_n" type="text" placeholder="Si lo dejas vacío, usa el nombre del tipo"></label>
+ <label>Fecha<input id="ev_d" type="date" value="${k}"></label>${timeIn("ev_a",tmin("09:00"),"Empieza")}${timeIn("ev_b",tmin("11:00"),"Termina")}
+ <div style="margin-top:10px"><button class="on" onclick="saveEvt()">Guardar</button></div>
+ <p class="dim">Sale en el calendario, en la pestaña Exámenes o Entregas (donde puedes ponerle nota y vincularlo con Notas), bloquea ese rato y recalcula el plan. Después puedes editarlo o quitarlo desde esa pestaña.</p></div>`;openPan()}
+function saveEvt(){const g=id=>document.getElementById(id).value,kind=g("ev_k"),E=EVT[kind],sj=g("ev_s");
+ if(!sj){toast("Elige la asignatura.");return}
+ const e={id:"x"+Date.now().toString(36),date:g("ev_d"),start:tmin(g("ev_a")||"0:0"),end:tmin(g("ev_b")||"0:0"),subj:sj,tipo:E.t,conv:E.t=="entrega"?"1C":g("ev_c"),cierto:true,user:true,name:g("ev_n").trim()||E.n};
+ if(E.lab){e.lab=E.lab;e.ico=E.ico}
+ if(!e.date||e.end<=e.start){toast("Revisa la fecha y las horas: «Termina» debe ser posterior a «Empieza».");return}
+ e.o={date:e.date,start:e.start,end:e.end,name:e.name};uex.push(e);DATA.exams.push({...e});saveUex();openDay=e.date;toast(E.n+" añadido: "+S[sj].name+" · "+e.date);replanNow()}
 /* añadir una tarea de estudio propia */
 let tkOpen=false;
 function addTaskForm(){const d1=iso(new Date(Date.now()+14*864e5));
@@ -616,13 +638,13 @@ function dayRows(k){const items=(byDay[k]||[]).filter(e=>!((e.t=="study"||e.t=="
  if(!items.length)h+=`<p class="dim">Sin actividades.</p>`;
  h+=`<p class="dim" style="font-size:12px">${window.matchMedia&&matchMedia("(hover:hover)").matches?"Puedes arrastrar las sesiones de estudio en las vistas Semana y Mes, o pulsar ✎.":"Pulsa ✎ para mover, editar o eliminar una sesión."}</p>`;
  items.forEach(e=>{if(e.t=="ctx"&&!ctxOn.has(e.kind))return;const c=e.t=="ctx"?ctxCol(e)[e.kind=="clase"?1:0]:e.subj?S[e.subj].ink:"#9aa3b8";let box="";if(e.t=="study"){const kk=key(e);box=`<input type="checkbox" ${store[kk]?"checked":""} onchange="toggle('${kk.replace(/'/g,"\\'")}',this.checked)">`}
-  const lab=e.t=="exam"?`<b style="color:var(--exam)">${e.tipo=="entrega"?"ENTREGA":"EXAMEN"} · ${SHORT[e.subj]}</b><br>${e.name}`:e.t=="ctx"?(e.cancelled?`<span class="dim" style="text-decoration:line-through">${e.name}</span> <b style="color:var(--exam)">CANCELADA</b>`:e.kind=="viaje"?`<span class="dim">${e.name} · ${e.study?"puedes estudiar":"sin estudio"}</span>`:`<span class="dim">${e.name} (${e.kind})</span>`):e.t=="admin"?e.name:`<b>${e.name}</b><br><span class="dim">${e.detail||""}</span>`;
+  const lab=e.t=="exam"?`<b style="color:var(--exam)">${exLab(e)} · ${SHORT[e.subj]}</b><br>${e.name}`:e.t=="ctx"?(e.cancelled?`<span class="dim" style="text-decoration:line-through">${e.name}</span> <b style="color:var(--exam)">CANCELADA</b>`:e.kind=="viaje"?`<span class="dim">${e.name} · ${e.study?"puedes estudiar":"sin estudio"}</span>`:`<span class="dim">${e.name} (${e.kind})</span>`):e.t=="admin"?e.name:`<b>${e.name}</b><br><span class="dim">${e.detail||""}</span>`;
   const ed=e.t=="study"?`<button title="Editar, mover o eliminar" onclick="editS(${reg(key(e))})" style="padding:2px 8px">✎</button>`
    :e.t=="ctx"&&e.kind=="clase"?`<button title="La clase no se da: ese hueco se usa para estudiar" onclick="togCls(${reg(clsKey(e))})" style="padding:2px 8px;font-size:12px">${e.cancelled?"Restaurar":"Cancelar clase"}</button>`
    :e.t=="ctx"&&e.kind=="viaje"?`<button title="Editar o eliminar el viaje" onclick="editLeg(${reg(e.legId)})" style="padding:2px 8px">✎</button>`
    :e.t=="ctx"&&e.kind=="gimnasio"?`<button title="Mover o quitar el gimnasio" onclick="editGym(${reg(e.id)})" style="padding:2px 8px">✎</button>`:"";
   h+=`<div class="row${e.missed?" missed":""}"><div class="t">${hm(e.start)}–${hm(e.end)}</div><div style="border-left:4px solid ${c};padding-left:8px;flex:1">${e.pin?"📌 ":""}${lab}</div>${box}${ed}</div>`});
- h+=`<p style="display:flex;gap:8px;flex-wrap:wrap"><button onclick="addS('${k}')">＋ Añadir sesión este día</button><button onclick="addTrip('${k}')">＋ Añadir viaje</button><button onclick="addGym('${k}')">＋ Añadir gimnasio</button></p>`;
+ h+=`<p style="display:flex;gap:8px;flex-wrap:wrap"><button onclick="addS('${k}')">＋ Añadir sesión este día</button><button onclick="addEvt('${k}')">＋ Examen, práctica o exposición</button><button onclick="addTrip('${k}')">＋ Añadir viaje</button><button onclick="addGym('${k}')">＋ Añadir gimnasio</button></p>`;
  return h}
 function day(k){openDay=k;const d=pd(k);
  const h=`<button onclick="closePan()" style="float:right">Cerrar</button><h3>${DIAS[wdi(d)]} ${d.getDate()} ${MES[d.getMonth()]}${k==today?" · HOY":""}</h3>${dayExtra(k)}`+dayRows(k);
@@ -707,7 +729,7 @@ function subsHTML(sj,sc,it){const key=sc.k+":"+it.id,man=(nst(sj).subs||{})[key]
  if(!man.length&&!lk.length)return"";
  let h=`<tr class="subs"><td colspan="8"><div class="dim" style="font-size:12px;margin-bottom:4px">Notas que forman «${esc(it.n)}»: media ponderada (el peso es relativo; por defecto todas pesan 1)</div>`;
  man.forEach(s=>{h+=`<div class="sub"><input class="nm" value="${esc(s.n)}" onchange="setSub('${sj}','${key}','${s.id}','n',this.value)"><input class="num" inputmode="decimal" placeholder="nota" value="${s.g==null?"":s.g}" onchange="setSub('${sj}','${key}','${s.id}','g',this.value)"><label class="dim">peso <input class="num" style="width:58px" inputmode="decimal" value="${s.w==null?1:s.w}" onchange="setSub('${sj}','${key}','${s.id}','w',this.value)"></label><button class="mini" title="Quitar" onclick="rmSub('${sj}','${key}','${s.id}')">✕</button></div>`});
- lk.forEach(({e,l,j})=>{const ki=reg(exKey(e)),d=pd(e.date);h+=`<div class="sub"><span class="nm">${e.tipo=="entrega"?"📌":"📝"} ${esc(e.name)} · ${d.getDate()} ${MES[d.getMonth()].slice(0,3)}${e.conv=="2C"?" (2.ª conv.)":""}</span>${mvSel(ki,j,l,sc)}<input class="num" inputmode="decimal" placeholder="nota / NP" value="${l.g==null?"":l.g}" onchange="setLG(${ki},${j},this.value)"><label class="dim">peso <input class="num" style="width:58px" inputmode="decimal" value="${l.w==null?1:l.w}" onchange="setLW(${ki},${j},this.value)"></label><button class="mini" title="Quitar el vínculo con este examen" onclick="rmLink(${ki},${j})">✕</button></div>`});
+ lk.forEach(({e,l,j})=>{const ki=reg(exKey(e)),d=pd(e.date);h+=`<div class="sub"><span class="nm">${exIco(e)} ${esc(e.name)} · ${d.getDate()} ${MES[d.getMonth()].slice(0,3)}${e.conv=="2C"?" (2.ª conv.)":""}</span>${mvSel(ki,j,l,sc)}<input class="num" inputmode="decimal" placeholder="nota / NP" value="${l.g==null?"":l.g}" onchange="setLG(${ki},${j},this.value)"><label class="dim">peso <input class="num" style="width:58px" inputmode="decimal" value="${l.w==null?1:l.w}" onchange="setLW(${ki},${j},this.value)"></label><button class="mini" title="Quitar el vínculo con este examen" onclick="rmLink(${ki},${j})">✕</button></div>`});
  return h+`</td></tr>`}
 function addSub(sj,pid){const st=nst(sj),key=schOf(sj).k+":"+pid;st.subs=st.subs||{};const a=st.subs[key]=st.subs[key]||[];a.push({id:Date.now().toString(36)+Math.floor(Math.random()*1e3),n:"Nota "+(a.length+1),g:null,w:1});saveN();render()}
 function setAux(sj,id,v){const st=nst(sj);st.aux=st.aux||{};st.aux[id]=pgx(v);saveN();render()}      // notas de Fotogrametría: solo se apuntan, no se calculan
